@@ -1,277 +1,156 @@
--- Student Analysis System for Instituto Tecnológico de Tijuana
--- This migration creates the complete database schema for tracking and analyzing
--- student failure and dropout rates, including risk factors and quality analysis tools.
-
--- Create majors table (Academic Programs/Careers)
-CREATE TABLE IF NOT EXISTS majors (
+-- Crear tabla estudiantes
+CREATE TABLE estudiantes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text UNIQUE NOT NULL,
-  code text UNIQUE,
-  created_at timestamptz DEFAULT now()
-);
-
--- Create subjects table (Academic Subjects/Courses)
-CREATE TABLE IF NOT EXISTS subjects (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  code text,
-  semester integer NOT NULL CHECK (semester > 0),
-  major_id uuid REFERENCES majors(id) ON DELETE CASCADE,
-  created_at timestamptz DEFAULT now()
-);
-
--- Create students table
-CREATE TABLE IF NOT EXISTS students (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  control_number text UNIQUE NOT NULL,
-  first_name text NOT NULL,
-  paternal_surname text NOT NULL,
-  maternal_surname text NOT NULL,
-  major_id uuid REFERENCES majors(id) ON DELETE SET NULL,
-  current_semester integer NOT NULL CHECK (current_semester > 0),
+  estudiante_id_number text UNIQUE NOT NULL CHECK (estudiante_id_number <> ''),
+  apellido_paterno text NOT NULL CHECK (apellido_paterno <> ''),
+  apellido_materno text NOT NULL CHECK (apellido_materno <> ''),
+  nombres text NOT NULL CHECK (nombres <> ''),
+  materia text NOT NULL CHECK (materia <> ''),
+  semestre integer NOT NULL CHECK (semestre > 0),
+  carrera text NOT NULL CHECK (carrera <> ''),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
--- Create student_subject_records table (Academic Performance)
-CREATE TABLE IF NOT EXISTS student_subject_records (
+-- Crear tabla calificaciones_estudiantes
+CREATE TABLE calificaciones_estudiantes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id uuid NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-  subject_id uuid NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
-  semester integer NOT NULL CHECK (semester > 0),
-  unit1_grade numeric(5,2) CHECK (unit1_grade >= 0 AND unit1_grade <= 100),
-  unit2_grade numeric(5,2) CHECK (unit2_grade >= 0 AND unit2_grade <= 100),
-  unit3_grade numeric(5,2) CHECK (unit3_grade >= 0 AND unit3_grade <= 100),
-  final_grade numeric(5,2) CHECK (final_grade >= 0 AND final_grade <= 100),
-  attendance_percentage numeric(5,2) CHECK (attendance_percentage >= 0 AND attendance_percentage <= 100),
-  status text DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'approved', 'failed', 'dropout')),
+  estudiante_id uuid NOT NULL REFERENCES estudiantes(id) ON DELETE CASCADE,
+  nombre_unidad text NOT NULL CHECK (nombre_unidad <> ''),
+  calificacion numeric NOT NULL CHECK (calificacion >= 0 AND calificacion <= 100),
+  porcentaje_asistencia numeric NOT NULL CHECK (porcentaje_asistencia >= 0 AND porcentaje_asistencia <= 100),
+  created_at timestamptz DEFAULT now()
+);
+
+-- Crear tabla factores_riesgo
+CREATE TABLE  factores_riesgo (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  categoria text NOT NULL CHECK (categoria IN ('academico', 'psicologico', 'economico', 'institucional', 'tecnologico', 'contextual')),
+  nombre_factor text NOT NULL CHECK (nombre_factor <> ''),
+  descripcion text DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+
+-- Crear tabla de unión factores_riesgo_estudiantes
+CREATE TABLE  factores_riesgo_estudiantes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  estudiante_id uuid NOT NULL REFERENCES estudiantes(id) ON DELETE CASCADE,
+  factor_riesgo_id uuid NOT NULL REFERENCES factores_riesgo(id) ON DELETE CASCADE,
+  gravedad text DEFAULT 'medio' CHECK (gravedad IN ('bajo', 'medio', 'alto')),
+  notas text DEFAULT '',
   created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
+  UNIQUE(estudiante_id, factor_riesgo_id)
 );
 
--- Create risk_factor_categories table
-CREATE TABLE IF NOT EXISTS risk_factor_categories (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text UNIQUE NOT NULL,
-  description text,
-  created_at timestamptz DEFAULT now()
-);
+-- Crear índices para mejor rendimiento de consultas
+CREATE INDEX idx_calificaciones_estudiantes_estudiante_id ON calificaciones_estudiantes(estudiante_id);
+CREATE INDEX idx_factores_riesgo_estudiantes_estudiante_id ON factores_riesgo_estudiantes(estudiante_id);
+CREATE INDEX idx_factores_riesgo_estudiantes_estudiante_id ON factores_riesgo_estudiantes(estudiante_id);
+CREATE INDEX idx_factores_riesgo_estudiantes_factor_riesgo_id ON factores_riesgo_estudiantes(factor_riesgo_id);
+CREATE INDEX idx_factores_riesgo_categoria ON factores_riesgo(categoria);
 
--- Create risk_factors table
-CREATE TABLE IF NOT EXISTS risk_factors (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  category_id uuid NOT NULL REFERENCES risk_factor_categories(id) ON DELETE CASCADE,
-  name text NOT NULL,
-  description text,
-  created_at timestamptz DEFAULT now()
-);
+-- Habilitar Row Level Security
+ALTER TABLE estudiantes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE calificaciones_estudiantes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE factores_riesgo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE factores_riesgo_estudiantes ENABLE ROW LEVEL SECURITY;
 
--- Create student_risk_factors table (Junction table with additional data)
-CREATE TABLE IF NOT EXISTS student_risk_factors (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_subject_record_id uuid NOT NULL REFERENCES student_subject_records(id) ON DELETE CASCADE,
-  risk_factor_id uuid NOT NULL REFERENCES risk_factors(id) ON DELETE CASCADE,
-  severity text DEFAULT 'medium' CHECK (severity IN ('low', 'medium', 'high')),
-  notes text,
-  created_at timestamptz DEFAULT now()
-);
-
--- Create analysis_reports table
-CREATE TABLE IF NOT EXISTS analysis_reports (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  title text NOT NULL,
-  analysis_type text NOT NULL CHECK (analysis_type IN ('pareto', 'histogram', 'scatter', 'control_chart', 'stratification')),
-  filters jsonb DEFAULT '{}'::jsonb,
-  results jsonb DEFAULT '{}'::jsonb,
-  created_by uuid,
-  created_at timestamptz DEFAULT now()
-);
-
--- Enable Row Level Security
-ALTER TABLE majors ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subjects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE students ENABLE ROW LEVEL SECURITY;
-ALTER TABLE student_subject_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE risk_factor_categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE risk_factors ENABLE ROW LEVEL SECURITY;
-ALTER TABLE student_risk_factors ENABLE ROW LEVEL SECURITY;
-ALTER TABLE analysis_reports ENABLE ROW LEVEL SECURITY;
-
--- Create policies for authenticated users (full access for internal system)
-CREATE POLICY "Authenticated users can view majors"
-  ON majors FOR SELECT
-  TO authenticated
+-- Políticas RLS para tabla estudiantes (acceso público)
+CREATE POLICY "Allow public read access to estudiantes"
+  ON estudiantes FOR SELECT
   USING (true);
 
-CREATE POLICY "Authenticated users can insert majors"
-  ON majors FOR INSERT
-  TO authenticated
+CREATE POLICY "Allow public insert access to estudiantes"
+  ON estudiantes FOR INSERT
   WITH CHECK (true);
 
-CREATE POLICY "Authenticated users can update majors"
-  ON majors FOR UPDATE
-  TO authenticated
+CREATE POLICY "Allow public update access to estudiantes"
+  ON estudiantes FOR UPDATE
   USING (true)
   WITH CHECK (true);
 
-CREATE POLICY "Authenticated users can delete majors"
-  ON majors FOR DELETE
-  TO authenticated
+CREATE POLICY "Allow public delete access to estudiantes"
+  ON estudiantes FOR DELETE
   USING (true);
 
-CREATE POLICY "Authenticated users can view subjects"
-  ON subjects FOR SELECT
-  TO authenticated
+-- Políticas RLS para tabla calificaciones_estudiantes (acceso público)
+CREATE POLICY "Allow public read access to calificaciones_estudiantes"
+  ON calificaciones_estudiantes FOR SELECT
   USING (true);
 
-CREATE POLICY "Authenticated users can insert subjects"
-  ON subjects FOR INSERT
-  TO authenticated
+CREATE POLICY "Allow public insert access to calificaciones_estudiantes"
+  ON calificaciones_estudiantes FOR INSERT
   WITH CHECK (true);
 
-CREATE POLICY "Authenticated users can update subjects"
-  ON subjects FOR UPDATE
-  TO authenticated
+CREATE POLICY "Allow public update access to calificaciones_estudiantes"
+  ON calificaciones_estudiantes FOR UPDATE
   USING (true)
   WITH CHECK (true);
 
-CREATE POLICY "Authenticated users can delete subjects"
-  ON subjects FOR DELETE
-  TO authenticated
+CREATE POLICY "Allow public delete access to calificaciones_estudiantes"
+  ON calificaciones_estudiantes FOR DELETE
   USING (true);
 
-CREATE POLICY "Authenticated users can view students"
-  ON students FOR SELECT
-  TO authenticated
+-- Políticas RLS para tabla factores_riesgo (acceso público)
+CREATE POLICY "Allow public read access to factores_riesgo"
+  ON factores_riesgo FOR SELECT
   USING (true);
 
-CREATE POLICY "Authenticated users can insert students"
-  ON students FOR INSERT
-  TO authenticated
+CREATE POLICY "Allow public insert access to factores_riesgo"
+  ON factores_riesgo FOR INSERT
   WITH CHECK (true);
 
-CREATE POLICY "Authenticated users can update students"
-  ON students FOR UPDATE
-  TO authenticated
+CREATE POLICY "Allow public update access to factores_riesgo"
+  ON factores_riesgo FOR UPDATE
   USING (true)
   WITH CHECK (true);
 
-CREATE POLICY "Authenticated users can delete students"
-  ON students FOR DELETE
-  TO authenticated
+CREATE POLICY "Allow public delete access to factores_riesgo"
+  ON factores_riesgo FOR DELETE
   USING (true);
 
-CREATE POLICY "Authenticated users can view records"
-  ON student_subject_records FOR SELECT
-  TO authenticated
+-- Políticas RLS para tabla factores_riesgo_estudiantes (acceso público)
+CREATE POLICY "Allow public read access to factores_riesgo_estudiantes"
+  ON factores_riesgo_estudiantes FOR SELECT
   USING (true);
 
-CREATE POLICY "Authenticated users can insert records"
-  ON student_subject_records FOR INSERT
-  TO authenticated
+CREATE POLICY "Allow public insert access to factores_riesgo_estudiantes"
+  ON factores_riesgo_estudiantes FOR INSERT
   WITH CHECK (true);
 
-CREATE POLICY "Authenticated users can update records"
-  ON student_subject_records FOR UPDATE
-  TO authenticated
+CREATE POLICY "Allow public update access to factores_riesgo_estudiantes"
+  ON factores_riesgo_estudiantes FOR UPDATE
   USING (true)
   WITH CHECK (true);
 
-CREATE POLICY "Authenticated users can delete records"
-  ON student_subject_records FOR DELETE
-  TO authenticated
+CREATE POLICY "Allow public delete access to factores_riesgo_estudiantes"
+  ON factores_riesgo_estudiantes FOR DELETE
   USING (true);
 
-CREATE POLICY "Authenticated users can view risk categories"
-  ON risk_factor_categories FOR SELECT
-  TO authenticated
-  USING (true);
+-- Insertar factores de riesgo predeterminados para cada categoría
+INSERT INTO factores_riesgo (categoria, nombre_factor, descripcion) VALUES
+  -- Factores académicos
+  ('academico', 'Bajo rendimiento académico', 'El estudiante tiene calificaciones consistentemente bajas'),
+  ('academico', 'Materias reprobadas', 'El estudiante ha reprobado una o más materias'),
+  
+  -- Factores psicológicos
+  ('psicologico', 'Baja motivación', 'El estudiante muestra falta de interés o motivación en sus estudios'),
+  ('psicologico', 'Estrés y ansiedad', 'El estudiante experimenta altos niveles de estrés o ansiedad'),
 
-CREATE POLICY "Authenticated users can insert risk categories"
-  ON risk_factor_categories FOR INSERT
-  TO authenticated
-  WITH CHECK (true);
-
-CREATE POLICY "Authenticated users can update risk categories"
-  ON risk_factor_categories FOR UPDATE
-  TO authenticated
-  USING (true)
-  WITH CHECK (true);
-
-CREATE POLICY "Authenticated users can delete risk categories"
-  ON risk_factor_categories FOR DELETE
-  TO authenticated
-  USING (true);
-
-CREATE POLICY "Authenticated users can view risk factors"
-  ON risk_factors FOR SELECT
-  TO authenticated
-  USING (true);
-
-CREATE POLICY "Authenticated users can insert risk factors"
-  ON risk_factors FOR INSERT
-  TO authenticated
-  WITH CHECK (true);
-
-CREATE POLICY "Authenticated users can update risk factors"
-  ON risk_factors FOR UPDATE
-  TO authenticated
-  USING (true)
-  WITH CHECK (true);
-
-CREATE POLICY "Authenticated users can delete risk factors"
-  ON risk_factors FOR DELETE
-  TO authenticated
-  USING (true);
-
-CREATE POLICY "Authenticated users can view student risk factors"
-  ON student_risk_factors FOR SELECT
-  TO authenticated
-  USING (true);
-
-CREATE POLICY "Authenticated users can insert student risk factors"
-  ON student_risk_factors FOR INSERT
-  TO authenticated
-  WITH CHECK (true);
-
-CREATE POLICY "Authenticated users can update student risk factors"
-  ON student_risk_factors FOR UPDATE
-  TO authenticated
-  USING (true)
-  WITH CHECK (true);
-
-CREATE POLICY "Authenticated users can delete student risk factors"
-  ON student_risk_factors FOR DELETE
-  TO authenticated
-  USING (true);
-
-CREATE POLICY "Authenticated users can view reports"
-  ON analysis_reports FOR SELECT
-  TO authenticated
-  USING (true);
-
-CREATE POLICY "Authenticated users can insert reports"
-  ON analysis_reports FOR INSERT
-  TO authenticated
-  WITH CHECK (true);
-
-CREATE POLICY "Authenticated users can update reports"
-  ON analysis_reports FOR UPDATE
-  TO authenticated
-  USING (true)
-  WITH CHECK (true);
-
-CREATE POLICY "Authenticated users can delete reports"
-  ON analysis_reports FOR DELETE
-  TO authenticated
-  USING (true);
-
--- Insert default risk factor categories
-INSERT INTO risk_factor_categories (name, description) VALUES
-  ('Academic', 'Factors related to academic performance and study habits'),
-  ('Psychosocial', 'Psychological and social factors affecting student wellbeing'),
-  ('Economic', 'Financial factors impacting student ability to continue studies'),
-  ('Institutional', 'Factors related to institutional support and resources'),
-  ('Technological', 'Technology access and digital literacy issues'),
-  ('Contextual', 'External environmental and family context factors')
-ON CONFLICT (name) DO NOTHING;
+  
+  -- Factores económicos
+  ('economico', 'Dificultades financieras', 'El estudiante enfrenta limitaciones económicas'),
+  ('economico', 'Necesidad de trabajar', 'El estudiante debe trabajar para mantenerse a sí mismo o a su familia'),
+  
+  -- Factores institucionales
+  ('institucional', 'Tutoría inadecuada', 'El estudiante recibe apoyo académico insuficiente'),
+  ('institucional', 'Diseño curricular deficiente', 'La estructura del curso no satisface las necesidades del estudiante'),
+  
+  -- Factores tecnológicos
+  ('tecnologico', 'Falta de habilidades tecnológicas', 'El estudiante tiene competencia digital insuficiente'),
+  ('tecnologico', 'Sin acceso a internet', 'El estudiante carece de conectividad a internet confiable'),
+  
+  -- Factores contextuales
+  ('contextual', 'Problemas de transporte', 'El estudiante enfrenta dificultades para llegar al campus'),
+  ('contextual', 'Problemas de salud', 'El estudiante tiene problemas de salud que afectan sus estudios'),
+ON CONFLICT DO NOTHING;
