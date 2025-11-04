@@ -1,232 +1,37 @@
-// import { useState, useEffect } from 'react';
-// import { supabase } from '../lib/supabase';
-// import { BarChart3, Download } from 'lucide-react';
-
-// interface ParetoData {
-//   factor: string;
-//   count: number;
-//   percentage: number;
-//   cumulativePercentage: number;
-// }
-
-// interface ParetoChartProps {
-//   filters: {
-//     semester?: number;
-//     majorId?: string;
-//   };
-// }
-
-// export default function ParetoChart({ filters }: ParetoChartProps) {
-//   const [data, setData] = useState<ParetoData[]>([]);
-//   const [loading, setLoading] = useState(true);
-
-//   useEffect(() => {
-//     loadData();
-//   }, [filters]);
-
-//   const loadData = async () => {
-//     setLoading(true);
-//     try {
-//       let query = supabase
-//         .from('student_risk_factors')
-//         .select(`
-//           risk_factor_id,
-//           risk_factors (name),
-//           student_subject_records!inner (
-//             semester,
-//             students!inner (major_id)
-//           )
-//         `);
-
-//       if (filters.semester) {
-//         query = query.eq('student_subject_records.semester', filters.semester);
-//       }
-
-//       if (filters.majorId) {
-//         query = query.eq('student_subject_records.students.major_id', filters.majorId);
-//       }
-
-//       const { data: riskData, error } = await query;
-
-//       if (error) throw error;
-
-//       const factorCounts = new Map<string, number>();
-
-//       riskData?.forEach((item: any) => {
-//         const factorName = item.risk_factors?.name || 'Desconocido';
-//         factorCounts.set(factorName, (factorCounts.get(factorName) || 0) + 1);
-//       });
-
-//       const total = Array.from(factorCounts.values()).reduce((sum, count) => sum + count, 0);
-
-//       const sortedData = Array.from(factorCounts.entries())
-//         .map(([factor, count]) => ({
-//           factor,
-//           count,
-//           percentage: (count / total) * 100,
-//           cumulativePercentage: 0,
-//         }))
-//         .sort((a, b) => b.count - a.count);
-
-//       let cumulative = 0;
-//       sortedData.forEach((item) => {
-//         cumulative += item.percentage;
-//         item.cumulativePercentage = cumulative;
-//       });
-
-//       setData(sortedData);
-//     } catch (error) {
-//       console.error('Error loading Pareto data:', error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const maxCount = Math.max(...data.map(d => d.count), 1);
-
-//   const exportToCSV = () => {
-//     const headers = ['Factor de Riesgo', 'Frecuencia', 'Porcentaje (%)', 'Acumulado (%)'];
-//     const rows = data.map(d => [
-//       d.factor,
-//       d.count,
-//       d.percentage.toFixed(2),
-//       d.cumulativePercentage.toFixed(2),
-//     ]);
-
-//     const csv = [
-//       headers.join(','),
-//       ...rows.map(row => row.join(',')),
-//     ].join('\n');
-
-//     const blob = new Blob([csv], { type: 'text/csv' });
-//     const url = window.URL.createObjectURL(blob);
-//     const a = document.createElement('a');
-//     a.href = url;
-//     a.download = `analisis-pareto-${new Date().toISOString().split('T')[0]}.csv`;
-//     a.click();
-//     window.URL.revokeObjectURL(url);
-//   };
-
-//   if (loading) {
-//     return (
-//       <div className="flex items-center justify-center h-96">
-//         <div className="text-gray-500">Cargando datos...</div>
-//       </div>
-//     );
-//   }
-
-//   if (data.length === 0) {
-//     return (
-//       <div className="flex items-center justify-center h-96">
-//         <div className="text-center text-gray-500">
-//           <BarChart3 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-//           <p>No hay datos disponibles para el análisis de Pareto</p>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="bg-white rounded-lg shadow-lg p-6">
-//       <div className="flex justify-between items-center mb-6">
-//         <div>
-//           <h2 className="text-2xl font-bold text-gray-800">Análisis de Pareto</h2>
-//           <p className="text-sm text-gray-600 mt-1">
-//             Factores de riesgo más frecuentes que afectan a los estudiantes
-//           </p>
-//         </div>
-//         <button
-//           onClick={exportToCSV}
-//           className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-//         >
-//           <Download className="w-4 h-4" />
-//           Exportar CSV
-//         </button>
-//       </div>
-
-//       <div className="relative">
-//         <div className="space-y-4">
-//           {data.map((item, index) => (
-//             <div key={index} className="space-y-2">
-//               <div className="flex justify-between items-center text-sm">
-//                 <span className="font-medium text-gray-700">{item.factor}</span>
-//                 <div className="flex items-center gap-4">
-//                   <span className="text-gray-600">{item.count} casos</span>
-//                   <span className="text-blue-600 font-semibold">{item.percentage.toFixed(1)}%</span>
-//                   <span className="text-orange-600 text-xs">↗ {item.cumulativePercentage.toFixed(1)}%</span>
-//                 </div>
-//               </div>
-//               <div className="relative h-12 bg-gray-100 rounded-lg overflow-hidden">
-//                 <div
-//                   className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-end pr-3 transition-all duration-500"
-//                   style={{ width: `${(item.count / maxCount) * 100}%` }}
-//                 >
-//                   <span className="text-white font-semibold text-sm">{item.count}</span>
-//                 </div>
-//                 <div
-//                   className="absolute inset-y-0 left-0 border-r-2 border-orange-500"
-//                   style={{ left: `${item.cumulativePercentage}%` }}
-//                 />
-//               </div>
-//             </div>
-//           ))}
-//         </div>
-
-//         <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-//           <h3 className="font-semibold text-blue-900 mb-2">Interpretación del Análisis de Pareto</h3>
-//           <p className="text-sm text-blue-800">
-//             El principio de Pareto (regla 80/20) sugiere que aproximadamente el 80% de los efectos
-//             provienen del 20% de las causas. Los factores en la parte superior de esta gráfica son
-//             los que tienen mayor impacto en el fracaso y deserción estudiantil.
-//           </p>
-//           {data.length > 0 && (
-//             <div className="mt-3 p-3 bg-white rounded border border-blue-100">
-//               <p className="text-sm font-medium text-gray-800">
-//                 <span className="text-orange-600">Línea acumulada:</span> Muestra el porcentaje acumulado.
-//                 Enfocarse en los primeros factores hasta alcanzar el 80% puede maximizar el impacto
-//                 de las intervenciones.
-//               </p>
-//             </div>
-//           )}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { BarChart3, Download } from 'lucide-react';
+import { BarChart3, AlertCircle, Download } from 'lucide-react';
 
-interface ParetoData {
-  factor: string;
+interface RiskFactorData {
+  nombre_factor: string;
+  categoria: string;
   count: number;
   percentage: number;
-  cumulativePercentage: number;
+  cumulative_percentage: number;
 }
 
 interface ParetoChartProps {
-  filters: {
+  filters?: {
     semester?: number;
     majorId?: string;
   };
 }
 
 export default function ParetoChart({ filters }: ParetoChartProps) {
-  const [data, setData] = useState<ParetoData[]>([]);
+  const [data, setData] = useState<RiskFactorData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    loadData();
+    loadParetoData();
   }, [filters]);
 
-  const loadData = async () => {
+  const loadParetoData = async () => {
     setLoading(true);
+    setError('');
+
     try {
-      // Construir la query para obtener factores de riesgo
+      // Query para obtener los factores de riesgo con sus categorías
       let query = supabase
         .from('factores_riesgo_estudiante')
         .select(`
@@ -234,38 +39,61 @@ export default function ParetoChart({ filters }: ParetoChartProps) {
           factor_riesgo_id,
           factores_riesgo!inner (
             nombre,
-            categorias_factores_riesgo!inner (nombre)
+            categorias_factores_riesgo!inner (
+              nombre
+            )
           ),
           registro_estudiante_materia_id,
           registros_estudiante_materia!inner (
             semestre,
-            estudiantes!inner (carrera_id)
+            estudiantes!inner (
+              carrera_id
+            )
           )
         `);
 
-      const { data: riskData, error } = await query;
+      const { data: riskFactorData, error: queryError } = await query;
 
-      if (error) {
-        console.error('Error en query:', error);
-        throw error;
+      if (queryError) {
+        console.error('Error en query:', queryError);
+        throw queryError;
       }
 
-      // Contar factores de riesgo por categoría
-      const factorCounts = new Map<string, number>();
+      if (!riskFactorData || riskFactorData.length === 0) {
+        setData([]);
+        setLoading(false);
+        return;
+      }
 
-      riskData?.forEach((item: any) => {
-        // Aplicar filtros
-        if (filters.semester && item.registros_estudiante_materia.semestre !== filters.semester) {
+      // Procesar los datos aplicando filtros
+      const factorCounts = new Map<string, { 
+        name: string; 
+        categoria: string; 
+        count: number 
+      }>();
+
+      riskFactorData.forEach((item: any) => {
+        // Aplicar filtros si existen
+        if (filters?.semester && item.registros_estudiante_materia.semestre !== filters.semester) {
           return;
         }
-        if (filters.majorId && item.registros_estudiante_materia.estudiantes.carrera_id !== filters.majorId) {
+        if (filters?.majorId && item.registros_estudiante_materia.estudiantes.carrera_id !== filters.majorId) {
           return;
         }
 
-        const categoryName = item.factores_riesgo?.categorias_factores_riesgo?.nombre || 
-                            item.factores_riesgo?.nombre || 
-                            'Factor Desconocido';
-        factorCounts.set(categoryName, (factorCounts.get(categoryName) || 0) + 1);
+        const factorId = item.factor_riesgo_id;
+        const factorName = item.factores_riesgo.nombre || 'Factor Desconocido';
+        const categoria = item.factores_riesgo.categorias_factores_riesgo?.nombre || 'Sin Categoría';
+
+        if (factorCounts.has(factorId)) {
+          factorCounts.get(factorId)!.count++;
+        } else {
+          factorCounts.set(factorId, { 
+            name: factorName, 
+            categoria: categoria.toLowerCase(), 
+            count: 1 
+          });
+        }
       });
 
       if (factorCounts.size === 0) {
@@ -274,43 +102,47 @@ export default function ParetoChart({ filters }: ParetoChartProps) {
         return;
       }
 
-      const total = Array.from(factorCounts.values()).reduce((sum, count) => sum + count, 0);
-
-      // Crear array de datos y ordenar por frecuencia
-      const sortedData = Array.from(factorCounts.entries())
-        .map(([factor, count]) => ({
-          factor,
-          count,
-          percentage: (count / total) * 100,
-          cumulativePercentage: 0,
-        }))
+      // Ordenar por frecuencia descendente
+      const sortedFactors = Array.from(factorCounts.values())
         .sort((a, b) => b.count - a.count);
 
-      // Calcular porcentajes acumulados
-      let cumulative = 0;
-      sortedData.forEach((item) => {
-        cumulative += item.percentage;
-        item.cumulativePercentage = cumulative;
+      const totalCount = sortedFactors.reduce((sum, factor) => sum + factor.count, 0);
+
+      // Calcular porcentajes y acumulados
+      let cumulativeCount = 0;
+      const paretoData: RiskFactorData[] = sortedFactors.map(factor => {
+        const percentage = (factor.count / totalCount) * 100;
+        cumulativeCount += factor.count;
+        const cumulative_percentage = (cumulativeCount / totalCount) * 100;
+
+        return {
+          nombre_factor: factor.name,
+          categoria: factor.categoria,
+          count: factor.count,
+          percentage,
+          cumulative_percentage
+        };
       });
 
-      setData(sortedData);
-    } catch (error) {
-      console.error('Error loading Pareto data:', error);
-      setData([]);
+      setData(paretoData);
+    } catch (err: any) {
+      console.error('Error completo:', err);
+      setError(err.message || 'Error al cargar datos del análisis de Pareto');
     } finally {
       setLoading(false);
     }
   };
 
-  const maxCount = Math.max(...data.map(d => d.count), 1);
-
   const exportToCSV = () => {
-    const headers = ['Factor de Riesgo', 'Frecuencia', 'Porcentaje (%)', 'Acumulado (%)'];
+    if (data.length === 0) return;
+
+    const headers = ['Factor de Riesgo', 'Categoría', 'Frecuencia', 'Porcentaje (%)', 'Acumulado (%)'];
     const rows = data.map(d => [
-      d.factor,
+      d.nombre_factor,
+      d.categoria,
       d.count,
       d.percentage.toFixed(2),
-      d.cumulativePercentage.toFixed(2),
+      d.cumulative_percentage.toFixed(2),
     ]);
 
     const csv = [
@@ -318,7 +150,7 @@ export default function ParetoChart({ filters }: ParetoChartProps) {
       ...rows.map(row => row.join(',')),
     ].join('\n');
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -327,12 +159,48 @@ export default function ParetoChart({ filters }: ParetoChartProps) {
     window.URL.revokeObjectURL(url);
   };
 
+  const maxCount = data.length > 0 ? Math.max(...data.map(d => d.count)) : 0;
+
+  const getCategoryColor = (categoria: string) => {
+    const colors: Record<string, string> = {
+      'académico': '#3b82f6',
+      'academico': '#3b82f6',
+      'psicológico': '#8b5cf6',
+      'psicologico': '#8b5cf6',
+      'económico': '#10b981',
+      'economico': '#10b981',
+      'institucional': '#f59e0b',
+      'tecnológico': '#06b6d4',
+      'tecnologico': '#06b6d4',
+      'contextual': '#ef4444',
+      'social': '#ec4899',
+      'familiar': '#f97316',
+    };
+    return colors[categoria.toLowerCase()] || '#6b7280';
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-500">Cargando datos...</p>
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-500">Cargando análisis de Pareto...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-red-900">Error al cargar datos</p>
+            <p className="text-sm text-red-700 mt-1">{error}</p>
+          </div>
         </div>
       </div>
     );
@@ -342,20 +210,19 @@ export default function ParetoChart({ filters }: ParetoChartProps) {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">Análisis de Pareto</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Factores de riesgo más frecuentes que afectan a los estudiantes
-            </p>
+          <div className="flex items-center gap-3">
+            <BarChart3 className="w-8 h-8 text-blue-600" />
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">Análisis de Pareto</h2>
+              <p className="text-sm text-gray-600">Factores de riesgo más frecuentes</p>
+            </div>
           </div>
         </div>
-        <div className="flex flex-col items-center justify-center h-96">
-          <BarChart3 className="w-12 h-12 text-gray-400 mb-4 opacity-50" />
-          <p className="text-gray-500 text-center">
-            No hay factores de riesgo registrados aún
-          </p>
-          <p className="text-sm text-gray-400 mt-2 text-center">
-            Los docentes pueden agregar factores de riesgo desde la vista de grupos
+        <div className="text-center py-12">
+          <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4 opacity-50" />
+          <p className="text-gray-500 mb-2">No hay datos de factores de riesgo disponibles</p>
+          <p className="text-sm text-gray-400">
+            Los docentes deben asignar factores de riesgo desde la vista de grupos
           </p>
         </div>
       </div>
@@ -364,12 +231,13 @@ export default function ParetoChart({ filters }: ParetoChartProps) {
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Análisis de Pareto</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Factores de riesgo más frecuentes que afectan a los estudiantes
-          </p>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <BarChart3 className="w-8 h-8 text-blue-600" />
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Análisis de Pareto</h2>
+            <p className="text-sm text-gray-600">Factores de riesgo más frecuentes</p>
+          </div>
         </div>
         <button
           onClick={exportToCSV}
@@ -380,72 +248,177 @@ export default function ParetoChart({ filters }: ParetoChartProps) {
         </button>
       </div>
 
-      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-blue-900">Total de factores identificados:</p>
-            <p className="text-2xl font-bold text-blue-700">
-              {data.reduce((sum, item) => sum + item.count, 0)}
-            </p>
+      <div className="space-y-6">
+        {/* Gráfica de Pareto */}
+        <div className="relative bg-gray-50 rounded-lg p-6">
+          <div className="relative h-96 border-l-2 border-b-2 border-gray-300 p-4">
+            {/* Eje Y izquierdo (Frecuencia) */}
+            <div className="absolute left-0 top-0 bottom-12 w-12 flex flex-col justify-between text-xs text-gray-600">
+              <span className="text-right pr-2">{maxCount}</span>
+              <span className="text-right pr-2">{Math.round(maxCount * 0.75)}</span>
+              <span className="text-right pr-2">{Math.round(maxCount * 0.5)}</span>
+              <span className="text-right pr-2">{Math.round(maxCount * 0.25)}</span>
+              <span className="text-right pr-2">0</span>
+            </div>
+
+            {/* Eje Y derecho (Porcentaje) */}
+            <div className="absolute right-0 top-0 bottom-12 w-12 flex flex-col justify-between text-xs text-gray-600">
+              <span className="pl-2">100%</span>
+              <span className="pl-2">75%</span>
+              <span className="pl-2">50%</span>
+              <span className="pl-2">25%</span>
+              <span className="pl-2">0%</span>
+            </div>
+
+            {/* Área de gráfica */}
+            <div className="h-full ml-14 mr-14 flex items-end gap-1 relative">
+              {/* Línea acumulativa */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }}>
+                <polyline
+                  points={data.map((d, i) => {
+                    const x = ((i + 0.5) / data.length) * 100;
+                    const y = 100 - d.cumulative_percentage;
+                    return `${x}%,${y}%`;
+                  }).join(' ')}
+                  fill="none"
+                  stroke="#ef4444"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {data.map((d, i) => {
+                  const x = ((i + 0.5) / data.length) * 100;
+                  const y = 100 - d.cumulative_percentage;
+                  return (
+                    <circle
+                      key={i}
+                      cx={`${x}%`}
+                      cy={`${y}%`}
+                      r="4"
+                      fill="#ef4444"
+                      stroke="white"
+                      strokeWidth="2"
+                    />
+                  );
+                })}
+              </svg>
+
+              {/* Barras */}
+              {data.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex-1 flex flex-col items-center relative group"
+                  style={{ height: '100%' }}
+                >
+                  <div className="w-full flex items-end justify-center" style={{ height: '100%' }}>
+                    <div
+                      className="w-full rounded-t-lg transition-all hover:opacity-80 cursor-pointer shadow-sm"
+                      style={{
+                        height: `${(item.count / maxCount) * 100}%`,
+                        backgroundColor: getCategoryColor(item.categoria),
+                        minHeight: '2px'
+                      }}
+                      title={`${item.nombre_factor}: ${item.count} ocurrencias (${item.percentage.toFixed(1)}%)`}
+                    />
+                  </div>
+
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                    <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                      <div className="font-semibold">{item.nombre_factor}</div>
+                      <div className="text-gray-300">{item.count} casos ({item.percentage.toFixed(1)}%)</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Línea del 80% */}
+            <div className="absolute left-14 right-14 h-px bg-orange-400" style={{ bottom: `calc(12px + 80%)` }}>
+              <span className="absolute right-0 -top-5 text-xs text-orange-600 font-medium bg-white px-1 rounded">
+                80% Acumulado
+              </span>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-blue-900">Categorías distintas:</p>
-            <p className="text-2xl font-bold text-blue-700">{data.length}</p>
+
+          {/* Leyenda de la línea acumulativa */}
+          <div className="mt-4 flex items-center justify-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-1 bg-red-500 rounded"></div>
+              <span className="text-gray-700">Porcentaje Acumulado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-1 bg-orange-400 rounded"></div>
+              <span className="text-gray-700">Línea 80% (Principio de Pareto)</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="relative">
-        <div className="space-y-4">
+        {/* Lista detallada de factores */}
+        <div className="space-y-2">
+          <h3 className="font-semibold text-gray-800 mb-3 text-lg">Detalle de Factores de Riesgo</h3>
           {data.map((item, index) => (
-            <div key={index} className="space-y-2">
-              <div className="flex justify-between items-center text-sm">
-                <span className="font-medium text-gray-700">{item.factor}</span>
-                <div className="flex items-center gap-4">
-                  <span className="text-gray-600">{item.count} casos</span>
-                  <span className="text-blue-600 font-semibold">{item.percentage.toFixed(1)}%</span>
-                  <span className="text-orange-600 text-xs">↗ {item.cumulativePercentage.toFixed(1)}%</span>
-                </div>
+            <div 
+              key={index} 
+              className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white text-sm font-semibold text-gray-700 shadow-sm">
+                {index + 1}
               </div>
-              <div className="relative h-12 bg-gray-100 rounded-lg overflow-hidden">
-                <div
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-end pr-3 transition-all duration-500"
-                  style={{ width: `${(item.count / maxCount) * 100}%` }}
-                >
-                  <span className="text-white font-semibold text-sm">{item.count}</span>
+              <div
+                className="w-4 h-4 rounded shadow-sm"
+                style={{ backgroundColor: getCategoryColor(item.categoria) }}
+              />
+              <div className="flex-1">
+                <div className="font-medium text-gray-800">{item.nombre_factor}</div>
+                <div className="text-sm text-gray-600 capitalize">{item.categoria}</div>
+              </div>
+              <div className="text-right">
+                <div className="font-semibold text-gray-800">{item.count} casos</div>
+                <div className="text-sm text-gray-600">
+                  {item.percentage.toFixed(1)}% | ↗ {item.cumulative_percentage.toFixed(1)}%
                 </div>
-                {/* Línea de acumulado */}
-                <div
-                  className="absolute inset-y-0 left-0 border-r-2 border-orange-500"
-                  style={{ left: `${Math.min(item.cumulativePercentage, 100)}%` }}
-                />
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="font-semibold text-blue-900 mb-2">Interpretación del Análisis de Pareto</h3>
-          <p className="text-sm text-blue-800">
-            El principio de Pareto (regla 80/20) sugiere que aproximadamente el 80% de los efectos
-            provienen del 20% de las causas. Los factores en la parte superior de esta gráfica son
-            los que tienen mayor impacto en el fracaso y deserción estudiantil.
+        {/* Información y análisis */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 className="font-semibold text-blue-900 mb-2">📊 Estadísticas Generales</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• <strong>Total de casos:</strong> {data.reduce((sum, d) => sum + d.count, 0)}</li>
+              <li>• <strong>Factores distintos:</strong> {data.length}</li>
+              <li>• <strong>Factor más común:</strong> {data[0]?.nombre_factor} ({data[0]?.count} casos)</li>
+            </ul>
+          </div>
+
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <h4 className="font-semibold text-green-900 mb-2">🎯 Análisis de Pareto (80/20)</h4>
+            <ul className="text-sm text-green-800 space-y-1">
+              <li>
+                • <strong>Factores vitales (80%):</strong>{' '}
+                {data.filter(d => d.cumulative_percentage <= 80).length} de {data.length}
+              </li>
+              <li>
+                • <strong>Recomendación:</strong> Enfocarse en los primeros{' '}
+                {data.filter(d => d.cumulative_percentage <= 80).length} factores para 
+                maximizar el impacto de las intervenciones.
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Interpretación del Principio de Pareto */}
+        <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+          <h4 className="font-semibold text-purple-900 mb-2">💡 Interpretación del Análisis</h4>
+          <p className="text-sm text-purple-800">
+            El principio de Pareto (regla 80/20) sugiere que aproximadamente el 80% de los efectos 
+            provienen del 20% de las causas. En este contexto, los factores en la parte superior de 
+            la gráfica son los que tienen mayor impacto en el fracaso y deserción estudiantil. 
+            Priorizar intervenciones en estos factores puede maximizar los resultados con recursos limitados.
           </p>
-          {data.length > 0 && (
-            <div className="mt-3 p-3 bg-white rounded border border-blue-100">
-              <p className="text-sm font-medium text-gray-800">
-                <span className="text-orange-600">Línea acumulada (↗):</span> Muestra el porcentaje acumulado.
-                Enfocarse en los primeros factores hasta alcanzar el 80% puede maximizar el impacto
-                de las intervenciones.
-              </p>
-              {data.length > 0 && data[0].cumulativePercentage >= 50 && (
-                <p className="text-sm text-blue-800 mt-2">
-                  <strong>Observación:</strong> El factor "{data[0].factor}" representa el {data[0].percentage.toFixed(1)}% 
-                  del total. Es prioritario atender este factor.
-                </p>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>
