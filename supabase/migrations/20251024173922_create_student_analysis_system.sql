@@ -1,6 +1,30 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
+CREATE TABLE public.asignaciones_docente_materia (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  docente_id uuid NOT NULL,
+  materia_id uuid NOT NULL,
+  asignado_en timestamp with time zone DEFAULT now(),
+  CONSTRAINT asignaciones_docente_materia_pkey PRIMARY KEY (id),
+  CONSTRAINT asignaciones_docente_materia_docente_id_fkey FOREIGN KEY (docente_id) REFERENCES auth.users(id),
+  CONSTRAINT asignaciones_docente_materia_materia_id_fkey FOREIGN KEY (materia_id) REFERENCES public.materias(id)
+);
+CREATE TABLE public.calificaciones_detalladas (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  inscripcion_id uuid NOT NULL,
+  tipo_evaluacion_id uuid NOT NULL,
+  puntuacion numeric CHECK (puntuacion >= 0::numeric),
+  comentarios text,
+  calificado_por uuid,
+  calificado_en timestamp with time zone DEFAULT now(),
+  creado_en timestamp with time zone DEFAULT now(),
+  actualizado_en timestamp with time zone DEFAULT now(),
+  CONSTRAINT calificaciones_detalladas_pkey PRIMARY KEY (id),
+  CONSTRAINT calificaciones_detalladas_inscripcion_id_fkey FOREIGN KEY (inscripcion_id) REFERENCES public.inscripciones_grupo(id),
+  CONSTRAINT calificaciones_detalladas_tipo_evaluacion_id_fkey FOREIGN KEY (tipo_evaluacion_id) REFERENCES public.tipos_evaluacion(id),
+  CONSTRAINT calificaciones_detalladas_calificado_por_fkey FOREIGN KEY (calificado_por) REFERENCES public.user_profiles(id)
+);
 CREATE TABLE public.calificaciones_estudiantes (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   estudiante_id uuid NOT NULL,
@@ -60,6 +84,44 @@ CREATE TABLE public.factores_riesgo_estudiante (
   CONSTRAINT factores_riesgo_estudiante_factor_riesgo_id_fkey FOREIGN KEY (factor_riesgo_id) REFERENCES public.factores_riesgo(id),
   CONSTRAINT factores_riesgo_estudiante_registro_estudiante_materia_id_fkey FOREIGN KEY (registro_estudiante_materia_id) REFERENCES public.registros_estudiante_materia(id)
 );
+CREATE TABLE public.grupos_materia (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  materia_id uuid NOT NULL,
+  docente_id uuid,
+  nombre_grupo text NOT NULL,
+  semestre_periodo integer NOT NULL CHECK (semestre_periodo > 0),
+  periodo_academico text NOT NULL,
+  cupo_maximo integer DEFAULT 40,
+  horario text,
+  esta_activo boolean DEFAULT true,
+  creado_en timestamp with time zone DEFAULT now(),
+  actualizado_en timestamp with time zone DEFAULT now(),
+  CONSTRAINT grupos_materia_pkey PRIMARY KEY (id),
+  CONSTRAINT grupos_materia_materia_id_fkey FOREIGN KEY (materia_id) REFERENCES public.materias(id),
+  CONSTRAINT grupos_materia_docente_id_fkey FOREIGN KEY (docente_id) REFERENCES public.user_profiles(id)
+);
+CREATE TABLE public.inscripciones_estudiante (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  estudiante_id uuid NOT NULL,
+  materia_id uuid NOT NULL,
+  inscrito_en timestamp with time zone DEFAULT now(),
+  estado text DEFAULT 'activo'::text CHECK (estado = ANY (ARRAY['activo'::text, 'baja'::text, 'completado'::text])),
+  CONSTRAINT inscripciones_estudiante_pkey PRIMARY KEY (id),
+  CONSTRAINT inscripciones_estudiante_estudiante_id_fkey FOREIGN KEY (estudiante_id) REFERENCES public.estudiantes(id),
+  CONSTRAINT inscripciones_estudiante_materia_id_fkey FOREIGN KEY (materia_id) REFERENCES public.materias(id)
+);
+CREATE TABLE public.inscripciones_grupo (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  grupo_id uuid NOT NULL,
+  estudiante_id uuid NOT NULL,
+  fecha_inscripcion timestamp with time zone DEFAULT now(),
+  estado text DEFAULT 'activo'::text CHECK (estado = ANY (ARRAY['activo'::text, 'baja'::text, 'completado'::text])),
+  calificacion_final numeric CHECK (calificacion_final >= 0::numeric AND calificacion_final <= 100::numeric),
+  creado_en timestamp with time zone DEFAULT now(),
+  CONSTRAINT inscripciones_grupo_pkey PRIMARY KEY (id),
+  CONSTRAINT inscripciones_grupo_grupo_id_fkey FOREIGN KEY (grupo_id) REFERENCES public.grupos_materia(id),
+  CONSTRAINT inscripciones_grupo_estudiante_id_fkey FOREIGN KEY (estudiante_id) REFERENCES public.estudiantes(id)
+);
 CREATE TABLE public.materias (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   nombre text NOT NULL,
@@ -67,8 +129,10 @@ CREATE TABLE public.materias (
   semestre integer NOT NULL CHECK (semestre > 0),
   carrera_id uuid,
   creado_en timestamp with time zone DEFAULT now(),
+  docente_id uuid,
   CONSTRAINT materias_pkey PRIMARY KEY (id),
-  CONSTRAINT materias_carrera_id_fkey FOREIGN KEY (carrera_id) REFERENCES public.carreras(id)
+  CONSTRAINT materias_carrera_id_fkey FOREIGN KEY (carrera_id) REFERENCES public.carreras(id),
+  CONSTRAINT materias_docente_id_fkey FOREIGN KEY (docente_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.registros_estudiante_materia (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -104,6 +168,18 @@ CREATE TABLE public.roles_usuario (
   creado_en timestamp with time zone DEFAULT now(),
   CONSTRAINT roles_usuario_pkey PRIMARY KEY (id),
   CONSTRAINT roles_usuario_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.tipos_evaluacion (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  grupo_id uuid NOT NULL,
+  nombre text NOT NULL,
+  peso numeric NOT NULL CHECK (peso >= 0::numeric AND peso <= 100::numeric),
+  puntos_maximos numeric DEFAULT 100,
+  fecha_limite timestamp with time zone,
+  descripcion text,
+  creado_en timestamp with time zone DEFAULT now(),
+  CONSTRAINT tipos_evaluacion_pkey PRIMARY KEY (id),
+  CONSTRAINT tipos_evaluacion_grupo_id_fkey FOREIGN KEY (grupo_id) REFERENCES public.grupos_materia(id)
 );
 CREATE TABLE public.user_profiles (
   id uuid NOT NULL,
