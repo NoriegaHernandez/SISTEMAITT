@@ -70,25 +70,28 @@ const handleSubmit = async (e: React.FormEvent) => {
         if (error) throw error;
         alert('Usuario actualizado correctamente');
       } else {
-const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-  email: formData.email,
-  password: formData.password,
-  email_confirm: true, // opcional: marca el correo como verificado
-  user_metadata: {
-    full_name: formData.full_name,
-    role: formData.role,
-  },
-});
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              full_name: formData.full_name,
+              role: formData.role,
+            },
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        });
 
-if (authError) {
-  if (authError.message.includes('duplicate key')) {
-    alert('Ya existe un usuario con ese correo electrónico.');
-  } else {
-    console.error('Error creando usuario:', authError);
-    alert(`Error creando usuario: ${authError.message}`);
-  }
-  throw authError;
-}
+        if (signUpError) {
+          const msg = signUpError.message || '';
+          if (msg.toLowerCase().includes('user already registered') || msg.toLowerCase().includes('duplicate')) {
+            alert('Ya existe un usuario con ese correo electrónico.');
+          } else {
+            console.error('Error creando usuario:', signUpError);
+            alert(`Error creando usuario: ${signUpError.message}`);
+          }
+          throw signUpError;
+        }
 
         alert('Usuario creado correctamente. Se ha enviado un correo de verificación al nuevo usuario.');
       }
@@ -233,9 +236,7 @@ const handleEdit = (user: UserWithProfile) => {
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
                     Estado
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Email Verificado
-                  </th>
+
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
                     Acciones
                   </th>
@@ -268,19 +269,7 @@ const handleEdit = (user: UserWithProfile) => {
                         {user.is_active ? 'Activo' : 'Inactivo'}
                       </button>
                     </td>
-                    <td className="px-4 py-3">
-                      {user.email_confirmed_at ? (
-                        <span className="inline-flex items-center gap-1 text-green-600 text-sm">
-                          <CheckCircle className="w-4 h-4" />
-                          Verificado
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-orange-600 text-sm">
-                          <XCircle className="w-4 h-4" />
-                          Pendiente
-                        </span>
-                      )}
-                    </td>
+                   
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <button
@@ -290,13 +279,7 @@ const handleEdit = (user: UserWithProfile) => {
                         >
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleDelete(user.id)}
-                          className="text-red-600 hover:text-red-800 p-1"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+
                       </div>
                     </td>
                   </tr>

@@ -184,7 +184,7 @@ export default function GroupManagement() {
           });
 
         if (error) throw error;
-        alert('✅ Grupo creado correctamente');
+        alert('Grupo creado correctamente');
       }
 
       setShowForm(false);
@@ -193,7 +193,7 @@ export default function GroupManagement() {
       await loadData(); // Esperar a que se recarguen los datos
     } catch (error: any) {
       console.error('Error:', error);
-      alert(`❌ Error: ${error.message}`);
+      alert(`Error: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -214,7 +214,7 @@ export default function GroupManagement() {
   };
 
   const handleDelete = async (grupoId: string) => {
-    if (!confirm('⚠️ ¿Eliminar este grupo? Se eliminarán todas las inscripciones y calificaciones asociadas.')) {
+    if (!confirm('¿Eliminar este grupo? Se eliminarán todas las inscripciones y calificaciones asociadas.')) {
       return;
     }
 
@@ -226,11 +226,11 @@ export default function GroupManagement() {
         .eq('id', grupoId);
 
       if (error) throw error;
-      alert('✅ Grupo eliminado correctamente');
+      alert('Grupo eliminado correctamente');
       await loadData();
     } catch (error: any) {
       console.error('Error:', error);
-      alert(`❌ Error al eliminar: ${error.message}`);
+      alert(`Error al eliminar: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -248,7 +248,7 @@ export default function GroupManagement() {
       await loadData();
     } catch (error: any) {
       console.error('Error:', error);
-      alert(`❌ Error: ${error.message}`);
+      alert(`Error: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -267,7 +267,7 @@ export default function GroupManagement() {
     // Verificar cupo disponible
     const cupoDisponible = selectedGroup.cupo_maximo - selectedGroup.inscritos;
     if (selectedStudents.length > cupoDisponible) {
-      alert(`⚠️ Solo hay ${cupoDisponible} lugares disponibles. Has seleccionado ${selectedStudents.length} estudiantes.`);
+      alert(`Solo hay ${cupoDisponible} lugares disponibles. Has seleccionado ${selectedStudents.length} estudiantes.`);
       return;
     }
 
@@ -284,7 +284,7 @@ export default function GroupManagement() {
       const nuevosEstudiantes = selectedStudents.filter(id => !yaInscritos.has(id));
 
       if (nuevosEstudiantes.length === 0) {
-        alert('⚠️ Todos los estudiantes seleccionados ya están inscritos en este grupo');
+        alert('Todos los estudiantes seleccionados ya están inscritos en este grupo');
         return;
       }
 
@@ -300,10 +300,10 @@ export default function GroupManagement() {
 
       if (error) throw error;
 
-      alert(`✅ ${nuevosEstudiantes.length} estudiante(s) inscrito(s) correctamente`);
+      alert(`${nuevosEstudiantes.length} estudiante(s) inscrito(s) correctamente`);
       
       if (yaInscritos.size > 0) {
-        alert(`ℹ️ ${yaInscritos.size} estudiante(s) ya estaban inscritos`);
+        alert(`ℹ${yaInscritos.size} estudiante(s) ya estaban inscritos`);
       }
 
       setShowEnrollForm(false);
@@ -314,7 +314,7 @@ export default function GroupManagement() {
       await loadData();
     } catch (error: any) {
       console.error('Error:', error);
-      alert(`❌ Error al inscribir: ${error.message}`);
+      alert(`Error al inscribir: ${error.message}`);
     } finally {
       setLoading(false);
     }
