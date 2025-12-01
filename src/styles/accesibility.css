@@ -1,0 +1,417 @@
+/* src/styles/accessibility.css */
+
+/* Variables CSS para accesibilidad */
+:root {
+  --bg-primary: #ffffff;
+  --text-primary: #000000;
+  --bg-secondary: #f5f5f5;
+  --focus-color: #0066cc;
+  --success-color: #28a745;
+  --warning-color: #ffc107;
+  --error-color: #dc3545;
+}
+
+/* Clase para screen readers - Solo para accesibilidad */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Alto Contraste */
+:root.high-contrast {
+  --bg-primary: #000000;
+  --text-primary: #ffffff;
+  --focus-color: #ffff00;
+  --success-color: #00ff00;
+  --warning-color: #ffff00;
+  --error-color: #ff0000;
+}
+
+:root.high-contrast * {
+  border-width: 2px !important;
+  outline-width: 3px !important;
+}
+
+:root.high-contrast button,
+:root.high-contrast input,
+:root.high-contrast select,
+:root.high-contrast textarea {
+  border: 2px solid var(--text-primary) !important;
+  padding: 8px 12px !important;
+}
+
+/* Colores Invertidos */
+:root.inverted-colors {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+:root.inverted-colors img,
+:root.inverted-colors video,
+:root.inverted-colors iframe {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Filtros para Daltonismo */
+/* SVG Filters para diferentes tipos de daltonismo */
+svg.colorblind-filters {
+  display: none;
+}
+
+/* Protanopaía (Ceguera al Rojo) */
+:root.protanopia {
+  filter: url(#protanopia-filter);
+}
+
+/* Deuteranopaía (Ceguera al Verde) */
+:root.deuteranopia {
+  filter: url(#deuteranopia-filter);
+}
+
+/* Tritanopaía (Ceguera al Azul) */
+:root.tritanopia {
+  filter: url(#tritanopia-filter);
+}
+
+/* Reducir Movimiento */
+:root.reduce-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Focus Visible - Mejorado para accesibilidad */
+:focus-visible {
+  outline: 3px solid var(--focus-color);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--focus-color);
+  outline-offset: 2px;
+}
+
+/* Focus Destacado */
+:root.highlight-focus *:focus {
+  box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.3), inset 0 0 0 2px #0066cc;
+}
+
+/* Puntero Grande */
+:root.large-pointer {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="rgba(0,102,204,0.3)" stroke="%230066cc" stroke-width="2"/><circle cx="16" cy="16" r="4" fill="%230066cc"/></svg>') 16 16, auto;
+}
+
+/* Contornos de Texto */
+:root.text-outline * {
+  text-shadow: 
+    -1px -1px 0 rgba(0, 0, 0, 0.3),
+    1px -1px 0 rgba(0, 0, 0, 0.3),
+    -1px 1px 0 rgba(0, 0, 0, 0.3),
+    1px 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Tema Oscuro */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1a1a1a;
+    --text-primary: #ffffff;
+    --bg-secondary: #2d2d2d;
+  }
+}
+
+/* Tema Noche */
+:root.night-mode {
+  --bg-primary: #0a0e27;
+  --text-primary: #e0e6ff;
+  --bg-secondary: #1a1f3a;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Formularios - Etiquetas accesibles */
+label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+label span.required {
+  color: var(--error-color);
+  margin-left: 0.25rem;
+  font-weight: bold;
+  aria-label: 'requerido';
+}
+
+/* Input con aria-label visible */
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+select[aria-invalid="true"] {
+  border-color: var(--error-color) !important;
+  border-width: 2px;
+}
+
+/* Notificaciones Visuales */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 16px;
+  border-radius: 4px;
+  border-left: 4px solid;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideIn 0.3s ease-out;
+  z-index: 1000;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+:root.reduce-motion .notification {
+  animation: none;
+}
+
+.notification.success {
+  background-color: #d4edda;
+  border-color: var(--success-color);
+  color: #155724;
+}
+
+.notification.warning {
+  background-color: #fff3cd;
+  border-color: var(--warning-color);
+  color: #856404;
+}
+
+.notification.error {
+  background-color: #f8d7da;
+  border-color: var(--error-color);
+  color: #721c24;
+}
+
+.notification.info {
+  background-color: #d1ecf1;
+  border-color: #0c5460;
+  color: #0c5460;
+}
+
+/* Indicador Visual para Notificaciones en lugar de sonidos */
+.notification-flash {
+  animation: visualFlash 1s ease-in-out;
+}
+
+@keyframes visualFlash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+:root.reduce-motion .notification-flash {
+  animation: none;
+}
+
+/* Navegación por Teclado */
+:root.keyboard-only .keyboard-hint {
+  position: relative;
+}
+
+:root.keyboard-only .keyboard-hint::after {
+  content: '(Presiona Tab para navegar)';
+  display: block;
+  font-size: 0.75rem;
+  color: #666;
+  font-style: italic;
+}
+
+/* Modo Enfocado - Ocultar distracciones */
+:root.focused-mode .sidebar,
+:root.focused-mode .header-secondary,
+:root.focused-mode .ads,
+:root.focused-mode .related-items {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+:root.focused-mode main {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Modo Simplificado */
+:root.simplified-mode .advanced-options,
+:root.simplified-mode .secondary-navigation {
+  display: none;
+}
+
+/* Tablas accesibles */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: bold;
+  padding: 12px;
+  text-align: left;
+  border: 1px solid #ddd;
+}
+
+td {
+  padding: 12px;
+  border: 1px solid #ddd;
+}
+
+tr:nth-child(even) {
+  background-color: var(--bg-secondary);
+}
+
+/* Mejorar contraste en links */
+a {
+  color: var(--focus-color);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+a:visited {
+  color: #663399;
+}
+
+a:hover {
+  text-decoration-thickness: 3px;
+}
+
+a:focus-visible {
+  outline: 3px solid var(--focus-color);
+  outline-offset: 4px;
+}
+
+/* Botones accesibles */
+button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 12px 16px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+button:focus-visible {
+  outline: 3px solid var(--focus-color);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Texto alterno para iconos */
+.icon-with-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Asegurar que los iconos tengan descripciones */
+svg[role="img"] {
+  aria-label: required;
+}
+
+/* Encabezados jerárquicos */
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+h1 { font-size: 2em; }
+h2 { font-size: 1.5em; }
+h3 { font-size: 1.17em; }
+
+/* Skip to main content link */
+.skip-to-main {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--focus-color);
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  z-index: 100;
+}
+
+.skip-to-main:focus {
+  top: 0;
+}
+
+/* Espacios en blanco suficientes */
+body {
+  line-height: 1.6;
+  letter-spacing: 0.3px;
+}
+
+p {
+  margin-bottom: 1em;
+}
+
+/* Evitar texto completamente justificado */
+p, li, td, th {
+  text-align: left;
+}
+
+/* Importancia visual adicional mediante combinación de métodos */
+.success-message::before,
+.error-message::before,
+.warning-message::before {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.success-message::before {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="green"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>');
+}
+
+.error-message::before {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="red"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>');
+}
+
+.warning-message::before {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="orange"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>');
+}
+
+/* Preferencias de usuario */
+@supports (font-variation-settings: normal) {
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+}

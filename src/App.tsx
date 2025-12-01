@@ -10,6 +10,9 @@ import UserManagement from './components/UserManagement';
 import GroupManagement from './components/GroupManagement';
 import TeacherGroupsView from './components/TeacherGroupsView';
 import StudentDashboard from './components/StudentDashboard';
+import { AccessibilityProvider } from './contexts/AccesibilityContext';
+import AccessibilityPanel from './components/AccesibilityPanel';
+import ColorblindFilters from './components/ColorblindFilters';
 
 type View = 'dashboard' | 'my-groups' | 'analysis' | 'reports' | 'import' | 'setup' | 'users' | 'groups';
 
@@ -258,9 +261,13 @@ function AppContent() {
 
 function App() {
   return (
+     <AccessibilityProvider>
     <AuthProvider>
+            <ColorblindFilters />
       <AppContent />
-    </AuthProvider>
+    <AccessibilityPanel />
+        </AuthProvider>
+    </AccessibilityProvider>
   );
 }
 
