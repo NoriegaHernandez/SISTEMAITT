@@ -10,7 +10,7 @@ import UserManagement from './components/UserManagement';
 import GroupManagement from './components/GroupManagement';
 import TeacherGroupsView from './components/TeacherGroupsView';
 import StudentDashboard from './components/StudentDashboard';
-import { AccessibilityProvider } from './contexts/AccesibilityContext';
+import { AccessibilityProvider } from './contexts/AccessibilityContext';
 import AccessibilityPanel from './components/AccesibilityPanel';
 import ColorblindFilters from './components/ColorblindFilters';
 

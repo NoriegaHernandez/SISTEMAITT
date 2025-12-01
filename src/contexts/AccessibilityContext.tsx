@@ -1,4 +1,3 @@
-// src/contexts/AccessibilityContext.tsx
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 
 export type ContrastMode = 'normal' | 'high' | 'inverted' | 'deuteranopia' | 'protanopia' | 'tritanopia';
@@ -13,16 +12,20 @@ export interface AccessibilitySettings {
   textSize: TextSize;
   textStyle: TextStyle;
   theme: Theme;
-  screenMagnification: number; // 100-300%
+  screenMagnification: number;
   showTextOutlines: boolean;
   reducedMotion: boolean;
   flashingDisabled: boolean;
   colorBlindMode: boolean;
+  letterSpacing: number; // NUEVA PROPIEDAD
+  lineHeight: number; // NUEVA PROPIEDAD
+  wordSpacing: number; // NUEVA PROPIEDAD
   
   // Auditivas
   transcriptionEnabled: boolean;
   captions: boolean;
   visualNotifications: boolean;
+  screenReader: boolean; // NUEVA PROPIEDAD
   
   // Motoras
   largePointer: boolean;
@@ -31,6 +34,7 @@ export interface AccessibilitySettings {
   voiceControl: boolean;
   gestureRecognition: boolean;
   onScreenKeyboard: boolean;
+  clickAssist: boolean; // NUEVA PROPIEDAD
   
   // Cognitivas
   readAloud: boolean;
@@ -49,6 +53,7 @@ interface AccessibilityContextType {
   exportSettings: () => string;
   importSettings: (json: string) => void;
   announceMessage: (message: string, priority?: 'polite' | 'assertive') => void;
+  speakText: (text: string) => void; // NUEVA FUNCIÓN
 }
 
 const defaultSettings: AccessibilitySettings = {
@@ -61,15 +66,20 @@ const defaultSettings: AccessibilitySettings = {
   reducedMotion: false,
   flashingDisabled: false,
   colorBlindMode: false,
+  letterSpacing: 0, // NUEVO
+  lineHeight: 1.6, // NUEVO
+  wordSpacing: 0, // NUEVO
   transcriptionEnabled: false,
   captions: false,
   visualNotifications: true,
+  screenReader: false, // NUEVO
   largePointer: false,
   keyboardNavigationOnly: false,
   slowKeyRepeat: false,
   voiceControl: false,
   gestureRecognition: false,
   onScreenKeyboard: false,
+  clickAssist: false, // NUEVO
   readAloud: false,
   focusedMode: 'normal',
   simplifiedMenus: false,
@@ -125,9 +135,62 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
     setTimeout(() => announcement.remove(), 3000);
   }, []);
 
+  // NUEVA FUNCIÓN: speakText para lectura en voz alta
+  const speakText = useCallback((text: string) => {
+    if ('speechSynthesis' in window && settings.readAloud) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'es-ES';
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [settings.readAloud]);
+
   useEffect(() => {
     applyAccessibilityStyles(settings);
-  }, [settings]);
+    
+    // Configurar atajos de teclado
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Alt+A para abrir panel de accesibilidad
+      if (e.altKey && e.key === 'a') {
+        e.preventDefault();
+        announceMessage('Atajo de teclado: Alt+A presionado');
+      }
+      
+      // Alt+1 al Alt+5 para cambiar tamaños de texto
+      if (e.altKey && ['1', '2', '3', '4', '5'].includes(e.key)) {
+        e.preventDefault();
+        const sizes: TextSize[] = ['small', 'normal', 'large', 'xlarge', 'xxlarge'];
+        const index = parseInt(e.key) - 1;
+        updateSettings({ textSize: sizes[index] });
+        announceMessage(`Tamaño de texto cambiado a ${sizes[index]}`);
+      }
+
+      // Alt+C para alto contraste
+      if (e.altKey && e.key === 'c') {
+        e.preventDefault();
+        const newMode = settings.contrastMode === 'high' ? 'normal' : 'high';
+        updateSettings({ contrastMode: newMode });
+        announceMessage(`Contraste cambiado a ${newMode === 'high' ? 'alto' : 'normal'}`);
+      }
+
+      // Alt+R para leer texto seleccionado
+      if (e.altKey && e.key === 'r' && settings.readAloud) {
+        e.preventDefault();
+        const selection = window.getSelection()?.toString();
+        if (selection) {
+          speakText(selection);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [settings, announceMessage, speakText, updateSettings]);
 
   return (
     <AccessibilityContext.Provider value={{
@@ -137,6 +200,7 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
       exportSettings,
       importSettings,
       announceMessage,
+      speakText, // AGREGAR AQUÍ
     }}>
       {children}
     </AccessibilityContext.Provider>
@@ -174,6 +238,11 @@ function applyAccessibilityStyles(settings: AccessibilitySettings) {
   };
   root.style.fontFamily = fontMap[settings.textStyle];
 
+  // NUEVOS ESTILOS: Espaciado
+  root.style.letterSpacing = `${settings.letterSpacing}px`;
+  root.style.lineHeight = `${settings.lineHeight}`;
+  root.style.wordSpacing = `${settings.wordSpacing}px`;
+
   // Zoom/Magnificación
   root.style.zoom = `${settings.screenMagnification}%`;
 
@@ -201,19 +270,10 @@ function applyAccessibilityStyles(settings: AccessibilitySettings) {
   });
 
   // Contraste
-  if (settings.contrastMode === 'high') {
-    root.classList.add('high-contrast');
-  } else {
-    root.classList.remove('high-contrast');
-  }
+  root.classList.toggle('high-contrast', settings.contrastMode === 'high');
+  root.classList.toggle('inverted-colors', settings.contrastMode === 'inverted');
 
-  if (settings.contrastMode === 'inverted') {
-    root.classList.add('inverted-colors');
-  } else {
-    root.classList.remove('inverted-colors');
-  }
-
-  // Daltonismo
+  // Daltonismo - aplicar filtros
   const colorblindFilters = {
     deuteranopia: 'url(#deuteranopia-filter)',
     protanopia: 'url(#protanopia-filter)',
@@ -227,31 +287,29 @@ function applyAccessibilityStyles(settings: AccessibilitySettings) {
   }
 
   // Movimiento reducido
-  if (settings.reducedMotion) {
-    root.classList.add('reduce-motion');
-  } else {
-    root.classList.remove('reduce-motion');
-  }
+  root.classList.toggle('reduce-motion', settings.reducedMotion);
 
   // Puntero grande
-  if (settings.largePointer) {
-    root.classList.add('large-pointer');
-  } else {
-    root.classList.remove('large-pointer');
-  }
+  root.classList.toggle('large-pointer', settings.largePointer);
 
   // Focus destacado
-  if (settings.highlightFocusArea) {
-    root.classList.add('highlight-focus');
-  } else {
-    root.classList.remove('highlight-focus');
-  }
+  root.classList.toggle('highlight-focus', settings.highlightFocusArea);
+
+  // Modo enfocado
+  root.classList.toggle('focused-mode', settings.focusedMode === 'focused');
+  root.classList.toggle('simplified-mode', settings.focusedMode === 'simplified');
+
+  // Contornos de texto
+  root.classList.toggle('text-outline', settings.showTextOutlines);
+
+  // Asistencia de click (hover pause)
+  root.classList.toggle('click-assist', settings.clickAssist);
 
   // Inyectar fuente Dyslexic si es necesaria
   if (settings.textStyle === 'dyslexic' && !document.getElementById('dyslexic-font')) {
     const link = document.createElement('link');
     link.id = 'dyslexic-font';
-    link.href = 'https://fonts.googleapis.com/css2?family=OpenDyslexic&display=swap';
+    link.href = 'https://fonts.cdnfonts.com/css/opendyslexic';
     link.rel = 'stylesheet';
     document.head.appendChild(link);
   }
