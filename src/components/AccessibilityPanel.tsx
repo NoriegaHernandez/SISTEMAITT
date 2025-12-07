@@ -138,7 +138,6 @@ export default function AccessibilityPanel() {
       <div className="flex border-b" role="tablist" aria-label="Categorías de accesibilidad">
         {[
           { id: 'visual', label: 'Visuales', icon: Eye },
-          { id: 'audio', label: 'Auditivas', icon: Volume2 },
           { id: 'motor', label: 'Motoras', icon: Mouse },
           { id: 'cognitive', label: 'Cognitivas', icon: Brain },
         ].map(({ id, label, icon: Icon }) => (
@@ -175,7 +174,7 @@ export default function AccessibilityPanel() {
           <div className="space-y-4">
             {/* Contraste y Daltonismo */}
             <div>
-              <label htmlFor="contrast-mode" className="block text-sm font-semibold mb-2 flex items-center gap-2">
+              <label htmlFor="contrast-mode" className="text-gray-900 block text-sm font-semibold mb-2 flex items-center gap-2">
                 <Contrast className="w-4 h-4" aria-hidden="true" />
                 Modo de Contraste y Visión Cromática
               </label>
@@ -187,7 +186,7 @@ export default function AccessibilityPanel() {
                   announceMessage(`Modo cambiado a ${e.target.value}`);
                 }}
                 onFocus={() => settings.readAloud && speakText('Modo de contraste')}
-                className="w-full px-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="text-gray-900 w-full px-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="normal">Normal</option>
                 <option value="high">Alto Contraste</option>
@@ -203,12 +202,12 @@ export default function AccessibilityPanel() {
 
             {/* Tamaño de texto con controles más accesibles */}
             <div>
-              <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+              <label className="text-gray-900 block text-sm font-semibold mb-2 flex items-center gap-2">
                 <Type className="w-4 h-4" aria-hidden="true" />
                 Tamaño de Texto
                 <span className="ml-auto text-xs font-normal text-gray-600">(Alt+1 a Alt+5)</span>
               </label>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="text-gray-900 grid grid-cols-5 gap-2">
                 {[
                   { size: 'small', label: 'Pequeño', fontSize: '12px' },
                   { size: 'normal', label: 'Normal', fontSize: '16px' },
@@ -240,8 +239,8 @@ export default function AccessibilityPanel() {
 
             {/* Espaciado de letras */}
             <div>
-              <label htmlFor="letter-spacing" className="block text-sm font-semibold mb-2 flex items-center gap-2">
-                <AlignLeft className="w-4 h-4" aria-hidden="true" />
+              <label htmlFor="letter-spacing" className="text-gray-900 block text-sm font-semibold mb-2 flex items-center gap-2">
+                <AlignLeft className="text-gray-900 w-4 h-4" aria-hidden="true" />
                 Espaciado entre Letras: {settings.letterSpacing}px
               </label>
               <input
@@ -263,7 +262,7 @@ export default function AccessibilityPanel() {
 
             {/* Altura de línea */}
             <div>
-              <label htmlFor="line-height" className="block text-sm font-semibold mb-2 flex items-center gap-2">
+              <label htmlFor="line-height" className="text-gray-900 block text-sm font-semibold mb-2 flex items-center gap-2">
                 <Space className="w-4 h-4" aria-hidden="true" />
                 Altura de Línea: {settings.lineHeight.toFixed(1)}
               </label>
@@ -285,7 +284,7 @@ export default function AccessibilityPanel() {
 
             {/* Espaciado de palabras */}
             <div>
-              <label htmlFor="word-spacing" className="block text-sm font-semibold mb-2 flex items-center gap-2">
+              <label htmlFor="word-spacing" className="text-gray-900 block text-sm font-semibold mb-2 flex items-center gap-2">
                 <Minus className="w-4 h-4" aria-hidden="true" />
                 Espaciado entre Palabras: {settings.wordSpacing}px
               </label>
@@ -307,13 +306,13 @@ export default function AccessibilityPanel() {
 
             {/* Tipo de fuente */}
             <div>
-              <label htmlFor="font-style" className="block text-sm font-semibold mb-2">Tipo de Fuente</label>
+              <label htmlFor="font-style" className="text-gray-900 block text-sm font-semibold mb-2">Tipo de Fuente</label>
               <select
                 id="font-style"
                 value={settings.textStyle}
                 onChange={(e) => updateSettings({ textStyle: e.target.value as any })}
                 onFocus={() => settings.readAloud && speakText('Selector de tipo de fuente')}
-                className="w-full px-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="text-gray-900 w-full px-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="default">Predeterminada</option>
                 <option value="dyslexic">OpenDyslexic (Dislexia)</option>
@@ -325,43 +324,11 @@ export default function AccessibilityPanel() {
               </small>
             </div>
 
-            {/* Tema */}
-            <div>
-              <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
-                <Moon className="w-4 h-4" aria-hidden="true" />
-                Tema de Color
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { theme: 'light', label: 'Claro', emoji: '☀️' },
-                  { theme: 'dark', label: 'Oscuro', emoji: '🌙' },
-                  { theme: 'night', label: 'Nocturno', emoji: '🌃' },
-                ].map(({ theme, label, emoji }) => (
-                  <button
-                    key={theme}
-                    onClick={() => {
-                      updateSettings({ theme: theme as any });
-                      announceMessage(`Tema cambiado a ${label}`);
-                    }}
-                    onMouseEnter={() => settings.readAloud && speakText(`Tema ${label}`)}
-                    className={`px-3 py-2 rounded border-2 transition-colors ${
-                      settings.theme === theme
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'border-gray-300 hover:border-blue-600'
-                    }`}
-                    aria-label={`Tema ${label}`}
-                    aria-pressed={settings.theme === theme}
-                  >
-                    <span className="text-2xl" aria-hidden="true">{emoji}</span>
-                    <span className="block text-xs mt-1">{label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+          
 
             {/* Zoom */}
             <div>
-              <label htmlFor="zoom-level" className="block text-sm font-semibold mb-2 flex items-center gap-2">
+              <label htmlFor="zoom-level" className="text-gray-900 block text-sm font-semibold mb-2 flex items-center gap-2">
                 <Maximize2 className="w-4 h-4" aria-hidden="true" />
                 Nivel de Zoom: {settings.screenMagnification}%
               </label>
@@ -383,7 +350,7 @@ export default function AccessibilityPanel() {
             </div>
 
             {/* Opciones de toggle */}
-            <fieldset className="space-y-2 border-t pt-3">
+            <fieldset className="text-gray-900 space-y-2 border-t pt-3">
               <legend className="text-sm font-semibold mb-2">Opciones Adicionales</legend>
               
               <label className="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded">
@@ -431,87 +398,7 @@ export default function AccessibilityPanel() {
           </div>
         )}
 
-        {activeTab === 'audio' && (
-          <div className="space-y-4">
-            <div className="bg-blue-50 p-3 rounded-lg mb-4">
-              <p className="text-sm text-gray-700 flex items-start gap-2">
-                <Info className="w-4 h-4 mt-0.5 flex-shrink-0" aria-hidden="true" />
-                <span>
-                  Estas opciones ayudan a personas sordas, con pérdida auditiva o que prefieren información visual.
-                </span>
-              </p>
-            </div>
-
-            <fieldset className="space-y-3">
-              <legend className="text-sm font-semibold mb-2">Opciones de Audio y Visualización</legend>
-              
-              <label className="flex items-start gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded border">
-                <input
-                  type="checkbox"
-                  checked={settings.screenReader}
-                  onChange={(e) => updateSettings({ screenReader: e.target.checked })}
-                  className="w-5 h-5 mt-0.5"
-                  aria-describedby="screen-reader-desc"
-                />
-                <div className="flex-1">
-                  <span className="text-sm font-medium block">Lector de pantalla activo</span>
-                  <span id="screen-reader-desc" className="text-xs text-gray-600">
-                    Anuncia cambios y contenido importante
-                  </span>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded border">
-                <input
-                  type="checkbox"
-                  checked={settings.captions}
-                  onChange={(e) => updateSettings({ captions: e.target.checked })}
-                  className="w-5 h-5 mt-0.5"
-                  aria-describedby="captions-desc"
-                />
-                <div className="flex-1">
-                  <span className="text-sm font-medium block">Subtítulos automáticos</span>
-                  <span id="captions-desc" className="text-xs text-gray-600">
-                    Muestra subtítulos en videos y contenido multimedia
-                  </span>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded border">
-                <input
-                  type="checkbox"
-                  checked={settings.visualNotifications}
-                  onChange={(e) => updateSettings({ visualNotifications: e.target.checked })}
-                  className="w-5 h-5 mt-0.5"
-                  aria-describedby="visual-notif-desc"
-                />
-                <div className="flex-1">
-                  <span className="text-sm font-medium block">Notificaciones visuales</span>
-                  <span id="visual-notif-desc" className="text-xs text-gray-600">
-                    Reemplaza alertas de sonido con notificaciones visuales
-                  </span>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded border">
-                <input
-                  type="checkbox"
-                  checked={settings.transcriptionEnabled}
-                  onChange={(e) => updateSettings({ transcriptionEnabled: e.target.checked })}
-                  className="w-5 h-5 mt-0.5"
-                  aria-describedby="transcription-desc"
-                />
-                <div className="flex-1">
-                  <span className="text-sm font-medium block">Transcripción en tiempo real</span>
-                  <span id="transcription-desc" className="text-xs text-gray-600">
-                    Convierte audio a texto automáticamente
-                  </span>
-                </div>
-              </label>
-            </fieldset>
-          </div>
-        )}
-
+        
         {activeTab === 'motor' && (
           <div className="space-y-4">
             <div className="bg-blue-50 p-3 rounded-lg mb-4">
@@ -523,7 +410,7 @@ export default function AccessibilityPanel() {
               </p>
             </div>
 
-            <fieldset className="space-y-3">
+            <fieldset className="text-gray-900 space-y-3">
               <legend className="text-sm font-semibold mb-2">Controles de Entrada</legend>
               
               <label className="flex items-start gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded border">
@@ -576,41 +463,6 @@ export default function AccessibilityPanel() {
                   </span>
                   <span id="keyboard-nav-desc" className="text-xs text-gray-600">
                     Optimiza la interfaz para navegación completa con teclado
-                  </span>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded border">
-                <input
-                  type="checkbox"
-                  checked={settings.slowKeyRepeat}
-                  onChange={(e) => updateSettings({ slowKeyRepeat: e.target.checked })}
-                  className="w-5 h-5 mt-0.5"
-                  aria-describedby="slow-key-desc"
-                />
-                <div className="flex-1">
-                  <span className="text-sm font-medium block">Repetición lenta de teclas</span>
-                  <span id="slow-key-desc" className="text-xs text-gray-600">
-                    Filtra pulsaciones accidentales y reduce velocidad de repetición
-                  </span>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded border">
-                <input
-                  type="checkbox"
-                  checked={settings.voiceControl}
-                  onChange={(e) => updateSettings({ voiceControl: e.target.checked })}
-                  className="w-5 h-5 mt-0.5"
-                  aria-describedby="voice-control-desc"
-                />
-                <div className="flex-1">
-                  <span className="text-sm font-medium block flex items-center gap-2">
-                    <Mic className="w-4 h-4" aria-hidden="true" />
-                    Control por voz
-                  </span>
-                  <span id="voice-control-desc" className="text-xs text-gray-600">
-                    Permite controlar la aplicación mediante comandos de voz
                   </span>
                 </div>
               </label>

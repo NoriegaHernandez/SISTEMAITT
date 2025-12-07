@@ -1,6 +1,538 @@
+// import { useState, useEffect } from 'react';
+// import { supabase } from '../lib/supabase';
+// import { useAuth } from '../contexts/AuthContext';
+// import { User, BookOpen, Award, Mail, Save, GraduationCap } from 'lucide-react';
+
+// interface EstudianteData {
+//   id: string;
+//   numero_control: string;
+//   nombre: string;
+//   apellido_paterno: string;
+//   apellido_materno: string;
+//   carrera_id: string | null;
+//   semestre_actual: number;
+// }
+
+// interface Carrera {
+//   id: string;
+//   nombre: string;
+// }
+
+// interface Calificacion {
+//   id: string;
+//   calificacion_final: number | null;
+//   grupos_materia: {
+//     nombre_grupo: string;
+//     periodo_academico: string;
+//     materia_id: string;
+//   };
+//   materia_nombre: string;
+// }
+
+// export default function StudentDashboard() {
+//   const { profile, user } = useAuth();
+//   const [activeTab, setActiveTab] = useState<'perfil' | 'calificaciones'>('perfil');
+//   const [loading, setLoading] = useState(true);
+//   const [saving, setSaving] = useState(false);
+//   const [estudianteData, setEstudianteData] = useState<EstudianteData | null>(null);
+//   const [carreras, setCarreras] = useState<Carrera[]>([]);
+//   const [calificaciones, setCalificaciones] = useState<Calificacion[]>([]);
+  
+//   const [formData, setFormData] = useState({
+//     nombre: '',
+//     apellido_paterno: '',
+//     apellido_materno: '',
+//     carrera_id: '',
+//     semestre_actual: 1,
+//   });
+
+//   useEffect(() => {
+//     loadData();
+//   }, [user]);
+
+//   const loadData = async () => {
+//     if (!user?.id) {
+//       setLoading(false);
+//       return;
+//     }
+
+//     setLoading(true);
+//     try {
+//       // Intentar encontrar estudiante en modelo español (estudiantes)
+//       const { data: estudianteByUser } = await supabase
+//         .from('estudiantes')
+//         .select('*')
+//         .eq('user_id', user.id)
+//         .maybeSingle();
+
+//       let estudianteEs: any = estudianteByUser;
+
+//       if (!estudianteEs && profile?.estudiante_id) {
+//         const { data: estudianteByProfile } = await supabase
+//           .from('estudiantes')
+//           .select('*')
+//           .eq('id', profile.estudiante_id)
+//           .maybeSingle();
+//         estudianteEs = estudianteByProfile;
+//       }
+
+//       // Intentar encontrar estudiante en modelo inglés (students)
+//       let estudianteEn: any = null;
+//       if (!estudianteEs && profile?.estudiante_id) {
+//         const { data: studentByProfile } = await supabase
+//           .from('students')
+//           .select('*')
+//           .eq('id', profile.estudiante_id)
+//           .maybeSingle();
+//         estudianteEn = studentByProfile;
+//       }
+
+//       if (!estudianteEs && !estudianteEn) {
+//         console.error('No se encontró estudiante para este usuario');
+//         setLoading(false);
+//         return;
+//       }
+
+//       // Normalizar datos del estudiante para el UI
+//       if (estudianteEs) {
+//         setEstudianteData({
+//           id: estudianteEs.id,
+//           numero_control: estudianteEs.numero_control,
+//           nombre: estudianteEs.nombre,
+//           apellido_paterno: estudianteEs.apellido_paterno,
+//           apellido_materno: estudianteEs.apellido_materno,
+//           carrera_id: estudianteEs.carrera_id,
+//           semestre_actual: estudianteEs.semestre_actual,
+//         });
+//         setFormData({
+//           nombre: estudianteEs.nombre,
+//           apellido_paterno: estudianteEs.apellido_paterno,
+//           apellido_materno: estudianteEs.apellido_materno,
+//           carrera_id: estudianteEs.carrera_id || '',
+//           semestre_actual: estudianteEs.semestre_actual,
+//         });
+//       } else if (estudianteEn) {
+//         setEstudianteData({
+//           id: estudianteEn.id,
+//           numero_control: estudianteEn.control_number,
+//           nombre: estudianteEn.first_name,
+//           apellido_paterno: estudianteEn.paternal_surname,
+//           apellido_materno: estudianteEn.maternal_surname,
+//           carrera_id: estudianteEn.major_id,
+//           semestre_actual: estudianteEn.current_semester,
+//         });
+//         setFormData({
+//           nombre: estudianteEn.first_name,
+//           apellido_paterno: estudianteEn.paternal_surname,
+//           apellido_materno: estudianteEn.maternal_surname,
+//           carrera_id: estudianteEn.major_id || '',
+//           semestre_actual: estudianteEn.current_semester,
+//         });
+//       }
+
+//       // Cargar carreras
+//       const { data: carrerasData } = await supabase
+//         .from('carreras')
+//         .select('id, nombre')
+//         .order('nombre');
+
+//       if (carrerasData) setCarreras(carrerasData);
+
+//       // Cargar calificaciones del estudiante desde ambos modelos
+//       const calificacionesAgregadas: Calificacion[] = [];
+
+//       if (estudianteEs) {
+//         const { data: inscripciones } = await supabase
+//           .from('inscripciones_grupo')
+//           .select(`
+//             id,
+//             calificacion_final,
+//             grupos_materia!inner (
+//               nombre_grupo,
+//               periodo_academico,
+//               materia_id
+//             )
+//           `)
+//           .eq('estudiante_id', estudianteEs.id)
+//           .order('fecha_inscripcion', { ascending: false });
+
+//         if (inscripciones && inscripciones.length > 0) {
+//           const materiaIds = inscripciones.map((i: any) => i.grupos_materia.materia_id);
+//           const { data: materiasData } = await supabase
+//             .from('materias')
+//             .select('id, nombre')
+//             .in('id', materiaIds);
+
+//           const materiasMap = new Map((materiasData || []).map((m: any) => [m.id, m.nombre]));
+
+//           calificacionesAgregadas.push(
+//             ...inscripciones.map((item: any) => ({
+//               id: item.id,
+//               calificacion_final: item.calificacion_final,
+//               grupos_materia: {
+//                 nombre_grupo: item.grupos_materia.nombre_grupo,
+//                 periodo_academico: item.grupos_materia.periodo_academico,
+//                 materia_id: item.grupos_materia.materia_id,
+//               },
+//               materia_nombre: materiasMap.get(item.grupos_materia.materia_id) || 'Sin nombre',
+//             }))
+//           );
+//         }
+//       }
+
+//       if (estudianteEn) {
+//         const { data: records } = await supabase
+//           .from('student_subject_records')
+//           .select(`
+//             id,
+//             final_grade,
+//             subjects!inner (
+//               id,
+//               name
+//             )
+//           `)
+//           .eq('student_id', estudianteEn.id)
+//           .order('created_at', { ascending: false });
+
+//         if (records && records.length > 0) {
+//           calificacionesAgregadas.push(
+//             ...records.map((r: any) => ({
+//               id: r.id,
+//               calificacion_final: r.final_grade,
+//               grupos_materia: {
+//                 nombre_grupo: '-',
+//                 periodo_academico: '-',
+//                 materia_id: r.subjects.id,
+//               },
+//               materia_nombre: r.subjects.name,
+//             }))
+//           );
+//         }
+//       }
+
+//       setCalificaciones(calificacionesAgregadas);
+//     } catch (error) {
+//       console.error('Error cargando datos:', error);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const handleSaveProfile = async () => {
+//     if (!estudianteData) return;
+
+//     setSaving(true);
+//     try {
+//       // Intentar actualizar en modelo español; si falla, omitir (no hay endpoint equivalente en inglés aquí)
+//       await supabase
+//         .from('estudiantes')
+//         .update({
+//           nombre: formData.nombre,
+//           apellido_paterno: formData.apellido_paterno,
+//           apellido_materno: formData.apellido_materno,
+//           carrera_id: formData.carrera_id || null,
+//           semestre_actual: formData.semestre_actual,
+//           actualizado_en: new Date().toISOString(),
+//         })
+//         .eq('id', estudianteData.id);
+
+//       alert('Información actualizada correctamente');
+//       loadData();
+//     } catch (error: any) {
+//       console.error('Error:', error);
+//       alert(`Error al actualizar: ${error.message}`);
+//     } finally {
+//       setSaving(false);
+//     }
+//   };
+
+//   const getPromedioGeneral = () => {
+//     const calificacionesConNota = calificaciones.filter(c => c.calificacion_final !== null);
+//     if (calificacionesConNota.length === 0) return null;
+    
+//     const suma = calificacionesConNota.reduce((acc, c) => acc + (c.calificacion_final || 0), 0);
+//     return (suma / calificacionesConNota.length).toFixed(2);
+//   };
+
+//   const getEstadisticas = () => {
+//     const total = calificaciones.length;
+//     const aprobadas = calificaciones.filter(c => c.calificacion_final && c.calificacion_final >= 70).length;
+//     const reprobadas = calificaciones.filter(c => c.calificacion_final && c.calificacion_final < 70).length;
+//     const sinCalificar = calificaciones.filter(c => c.calificacion_final === null).length;
+
+//     return { total, aprobadas, reprobadas, sinCalificar };
+//   };
+
+//   if (loading) {
+//     return (
+//       <div className="flex items-center justify-center h-96">
+//         <div className="text-center">
+//           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+//           <p className="text-gray-500">Cargando información...</p>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   if (!estudianteData) {
+//     return (
+//       <div className="bg-white rounded-lg shadow-lg p-6">
+//         <div className="text-center py-12">
+//           <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+//           <p className="text-gray-600 mb-4">No se encontró información de estudiante.</p>
+//           <p className="text-sm text-gray-500">Contacta al administrador del sistema.</p>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   const estadisticas = getEstadisticas();
+//   const promedio = getPromedioGeneral();
+
+//   return (
+//     <div className="space-y-6">
+//       <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 text-white">
+//         <div className="flex items-center gap-4">
+//           <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+//             <User className="w-10 h-10" />
+//           </div>
+//           <div className="flex-1">
+//             <h2 className="text-2xl font-bold">
+//               {estudianteData.apellido_paterno} {estudianteData.apellido_materno}, {estudianteData.nombre}
+//             </h2>
+//             <p className="text-blue-100 mt-1">Número de Control: {estudianteData.numero_control}</p>
+//             <div className="flex items-center gap-2 mt-2 text-blue-100">
+//               <Mail className="w-4 h-4" />
+//               <span className="text-sm">{user?.email}</span>
+//             </div>
+//           </div>
+//           {promedio && (
+//             <div className="text-center bg-white bg-opacity-20 rounded-lg p-4">
+//               <Award className="w-8 h-8 mx-auto mb-1" />
+//               <p className="text-3xl font-bold">{promedio}</p>
+//               <p className="text-xs text-blue-100">Promedio General</p>
+//             </div>
+//           )}
+//         </div>
+//       </div>
+
+//       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+//         <div className="bg-white rounded-lg shadow p-4">
+//           <p className="text-sm text-gray-600 mb-1">Materias Inscritas</p>
+//           <p className="text-2xl font-bold text-gray-800">{estadisticas.total}</p>
+//         </div>
+//         <div className="bg-white rounded-lg shadow p-4">
+//           <p className="text-sm text-gray-600 mb-1">Aprobadas</p>
+//           <p className="text-2xl font-bold text-green-600">{estadisticas.aprobadas}</p>
+//         </div>
+//         <div className="bg-white rounded-lg shadow p-4">
+//           <p className="text-sm text-gray-600 mb-1">Reprobadas</p>
+//           <p className="text-2xl font-bold text-red-600">{estadisticas.reprobadas}</p>
+//         </div>
+//         <div className="bg-white rounded-lg shadow p-4">
+//           <p className="text-sm text-gray-600 mb-1">En Progreso</p>
+//           <p className="text-2xl font-bold text-blue-600">{estadisticas.sinCalificar}</p>
+//         </div>
+//       </div>
+
+//       <div className="bg-white rounded-lg shadow-lg">
+//         <div className="flex border-b border-gray-200">
+//           <button
+//             onClick={() => setActiveTab('perfil')}
+//             className={`flex-1 px-6 py-4 font-medium transition-colors border-b-2 ${
+//               activeTab === 'perfil' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
+//             }`}
+//           >
+//             <div className="flex items-center justify-center gap-2">
+//               <User className="w-5 h-5" />
+//               Mi Perfil
+//             </div>
+//           </button>
+//           <button
+//             onClick={() => setActiveTab('calificaciones')}
+//             className={`flex-1 px-6 py-4 font-medium transition-colors border-b-2 ${
+//               activeTab === 'calificaciones' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
+//             }`}
+//           >
+//             <div className="flex items-center justify-center gap-2">
+//               <BookOpen className="w-5 h-5" />
+//               Mis Calificaciones
+//             </div>
+//           </button>
+//         </div>
+
+//         <div className="p-6">
+//           {activeTab === 'perfil' ? (
+//             <div>
+//               <div className="flex items-center gap-3 mb-6">
+//                 <GraduationCap className="w-6 h-6 text-blue-600" />
+//                 <h3 className="text-xl font-bold text-gray-800">Información Personal</h3>
+//               </div>
+
+//               <div className="space-y-6">
+//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                   <div>
+//                     <label className="block text-sm font-medium text-gray-700 mb-2">Nombre(s) *</label>
+//                     <input
+//                       type="text"
+//                       required
+//                       value={formData.nombre}
+//                       onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+//                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+//                     />
+//                   </div>
+
+//                   <div>
+//                     <label className="block text-sm font-medium text-gray-700 mb-2">Apellido Paterno *</label>
+//                     <input
+//                       type="text"
+//                       required
+//                       value={formData.apellido_paterno}
+//                       onChange={(e) => setFormData({ ...formData, apellido_paterno: e.target.value })}
+//                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+//                     />
+//                   </div>
+
+//                   <div>
+//                     <label className="block text-sm font-medium text-gray-700 mb-2">Apellido Materno *</label>
+//                     <input
+//                       type="text"
+//                       required
+//                       value={formData.apellido_materno}
+//                       onChange={(e) => setFormData({ ...formData, apellido_materno: e.target.value })}
+//                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+//                     />
+//                   </div>
+
+//                   <div>
+//                     <label className="block text-sm font-medium text-gray-700 mb-2">Carrera</label>
+//                     <select
+//                       value={formData.carrera_id}
+//                       onChange={(e) => setFormData({ ...formData, carrera_id: e.target.value })}
+//                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+//                     >
+//                       <option value="">Seleccionar carrera</option>
+//                       {carreras.map((carrera) => (
+//                         <option key={carrera.id} value={carrera.id}>{carrera.nombre}</option>
+//                       ))}
+//                     </select>
+//                   </div>
+
+//                   <div>
+//                     <label className="block text-sm font-medium text-gray-700 mb-2">Semestre Actual *</label>
+//                     <input
+//                       type="number"
+//                       required
+//                       min="1"
+//                       max="12"
+//                       value={formData.semestre_actual}
+//                       onChange={(e) => setFormData({ ...formData, semestre_actual: parseInt(e.target.value) })}
+//                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+//                     />
+//                   </div>
+
+//                   <div>
+//                     <label className="block text-sm font-medium text-gray-700 mb-2">Número de Control</label>
+//                     <input
+//                       type="text"
+//                       value={estudianteData.numero_control}
+//                       disabled
+//                       className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+//                     />
+//                     <p className="text-xs text-gray-500 mt-1">Este campo no se puede modificar</p>
+//                   </div>
+//                 </div>
+
+//                 <div className="flex justify-end pt-4 border-t">
+//                   <button
+//                     onClick={handleSaveProfile}
+//                     disabled={saving}
+//                     className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+//                   >
+//                     <Save className="w-4 h-4" />
+//                     {saving ? 'Guardando...' : 'Guardar Cambios'}
+//                   </button>
+//                 </div>
+//               </div>
+
+//               <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+//                 <p className="text-sm text-blue-900">
+//                   <strong>Nota:</strong> Solo puedes modificar tu información personal. Las calificaciones son asignadas por los docentes.
+//                 </p>
+//               </div>
+//             </div>
+//           ) : (
+//             <div>
+//               <h3 className="text-xl font-bold text-gray-800 mb-6">Historial de Calificaciones</h3>
+
+//               {calificaciones.length === 0 ? (
+//                 <div className="text-center py-12 text-gray-500">No tienes materias inscritas aún</div>
+//               ) : (
+//                 <div className="overflow-x-auto">
+//                   <table className="w-full">
+//                     <thead>
+//                       <tr className="border-b border-gray-200">
+//                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Materia</th>
+//                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Grupo</th>
+//                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Periodo</th>
+//                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Calificación</th>
+//                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Estado</th>
+//                       </tr>
+//                     </thead>
+//                     <tbody>
+//                       {calificaciones.map((cal) => (
+//                         <tr key={cal.id} className="border-b border-gray-100 hover:bg-gray-50">
+//                           <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+//                             {cal.materia_nombre}
+//                           </td>
+//                           <td className="px-4 py-3 text-sm text-gray-700">{cal.grupos_materia.nombre_grupo}</td>
+//                           <td className="px-4 py-3 text-sm text-gray-700">{cal.grupos_materia.periodo_academico}</td>
+//                           <td className="px-4 py-3 text-sm">
+//                             {cal.calificacion_final !== null ? (
+//                               <span className={`font-semibold text-lg ${
+//                                 cal.calificacion_final >= 70 ? 'text-green-700' : 'text-red-700'
+//                               }`}>
+//                                 {cal.calificacion_final.toFixed(2)}
+//                               </span>
+//                             ) : (
+//                               <span className="text-gray-400 italic">En progreso</span>
+//                             )}
+//                           </td>
+//                           <td className="px-4 py-3">
+//                             {cal.calificacion_final !== null ? (
+//                               <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+//                                 cal.calificacion_final >= 70
+//                                   ? 'bg-green-100 text-green-800'
+//                                   : 'bg-red-100 text-red-800'
+//                               }`}>
+//                                 {cal.calificacion_final >= 70 ? 'Aprobado' : 'Reprobado'}
+//                               </span>
+//                             ) : (
+//                               <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+//                                 Cursando
+//                               </span>
+//                             )}
+//                           </td>
+//                         </tr>
+//                       ))}
+//                     </tbody>
+//                   </table>
+//                 </div>
+//               )}
+//             </div>
+//           )}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useAccessibility } from '../contexts/AccessibilityContext';
 import { User, BookOpen, Award, Mail, Save, GraduationCap } from 'lucide-react';
 
 interface EstudianteData {
@@ -31,6 +563,7 @@ interface Calificacion {
 
 export default function StudentDashboard() {
   const { profile, user } = useAuth();
+  const { settings, announceMessage, speakText } = useAccessibility();
   const [activeTab, setActiveTab] = useState<'perfil' | 'calificaciones'>('perfil');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -50,6 +583,12 @@ export default function StudentDashboard() {
     loadData();
   }, [user]);
 
+  useEffect(() => {
+    if (!loading && estudianteData) {
+      announceMessage('Panel de estudiante cargado', 'polite');
+    }
+  }, [loading, estudianteData]);
+
   const loadData = async () => {
     if (!user?.id) {
       setLoading(false);
@@ -57,6 +596,8 @@ export default function StudentDashboard() {
     }
 
     setLoading(true);
+    announceMessage('Cargando información del estudiante, por favor espere', 'polite');
+    
     try {
       // Intentar encontrar estudiante en modelo español (estudiantes)
       const { data: estudianteByUser } = await supabase
@@ -89,6 +630,7 @@ export default function StudentDashboard() {
 
       if (!estudianteEs && !estudianteEn) {
         console.error('No se encontró estudiante para este usuario');
+        announceMessage('No se encontró información de estudiante', 'assertive');
         setLoading(false);
         return;
       }
@@ -213,6 +755,10 @@ export default function StudentDashboard() {
       setCalificaciones(calificacionesAgregadas);
     } catch (error) {
       console.error('Error cargando datos:', error);
+      announceMessage('Error al cargar la información', 'assertive');
+      if (settings.readAloud) {
+        speakText('Error al cargar la información del estudiante');
+      }
     } finally {
       setLoading(false);
     }
@@ -222,6 +768,8 @@ export default function StudentDashboard() {
     if (!estudianteData) return;
 
     setSaving(true);
+    announceMessage('Guardando información del perfil, por favor espere', 'polite');
+    
     try {
       // Intentar actualizar en modelo español; si falla, omitir (no hay endpoint equivalente en inglés aquí)
       await supabase
@@ -236,13 +784,32 @@ export default function StudentDashboard() {
         })
         .eq('id', estudianteData.id);
 
-      alert('Información actualizada correctamente');
+      const successMsg = 'Información actualizada correctamente';
+      announceMessage(successMsg, 'assertive');
+      if (settings.readAloud) {
+        speakText(successMsg);
+      }
+      alert(successMsg);
       loadData();
     } catch (error: any) {
       console.error('Error:', error);
-      alert(`Error al actualizar: ${error.message}`);
+      const errorMsg = `Error al actualizar: ${error.message}`;
+      announceMessage(errorMsg, 'assertive');
+      if (settings.readAloud) {
+        speakText(errorMsg);
+      }
+      alert(errorMsg);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTabChange = (tab: 'perfil' | 'calificaciones') => {
+    setActiveTab(tab);
+    const tabName = tab === 'perfil' ? 'Mi Perfil' : 'Mis Calificaciones';
+    announceMessage(`Cambiando a pestaña ${tabName}`, 'polite');
+    if (settings.readAloud) {
+      speakText(`Pestaña ${tabName}`);
     }
   };
 
@@ -265,9 +832,17 @@ export default function StudentDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div 
+        className="flex items-center justify-center h-96"
+        role="status"
+        aria-live="polite"
+        aria-label="Cargando información del estudiante"
+      >
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div 
+            className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"
+            aria-hidden="true"
+          ></div>
           <p className="text-gray-500">Cargando información...</p>
         </div>
       </div>
@@ -277,8 +852,12 @@ export default function StudentDashboard() {
   if (!estudianteData) {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="text-center py-12">
-          <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+        <div 
+          className="text-center py-12"
+          role="alert"
+          aria-live="assertive"
+        >
+          <User className="w-16 h-16 text-gray-400 mx-auto mb-4" aria-hidden="true" />
           <p className="text-gray-600 mb-4">No se encontró información de estudiante.</p>
           <p className="text-sm text-gray-500">Contacta al administrador del sistema.</p>
         </div>
@@ -290,25 +869,50 @@ export default function StudentDashboard() {
   const promedio = getPromedioGeneral();
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 text-white">
+    <div className="space-y-6" role="main" aria-label="Panel del estudiante">
+      <div 
+        className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 text-white"
+        role="banner"
+        aria-label="Información del estudiante"
+      >
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+          <div 
+            className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center"
+            aria-hidden="true"
+          >
             <User className="w-10 h-10" />
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-bold">
+            <h2 
+              className="text-2xl font-bold"
+              onMouseEnter={() => settings.readAloud && speakText(`${estudianteData.apellido_paterno} ${estudianteData.apellido_materno}, ${estudianteData.nombre}`)}
+            >
               {estudianteData.apellido_paterno} {estudianteData.apellido_materno}, {estudianteData.nombre}
             </h2>
-            <p className="text-blue-100 mt-1">Número de Control: {estudianteData.numero_control}</p>
+            <p 
+              className="text-blue-100 mt-1"
+              onMouseEnter={() => settings.readAloud && speakText(`Número de Control: ${estudianteData.numero_control}`)}
+            >
+              Número de Control: {estudianteData.numero_control}
+            </p>
             <div className="flex items-center gap-2 mt-2 text-blue-100">
-              <Mail className="w-4 h-4" />
-              <span className="text-sm">{user?.email}</span>
+              <Mail className="w-4 h-4" aria-hidden="true" />
+              <span 
+                className="text-sm"
+                onMouseEnter={() => settings.readAloud && speakText(`Correo: ${user?.email}`)}
+              >
+                {user?.email}
+              </span>
             </div>
           </div>
           {promedio && (
-            <div className="text-center bg-white bg-opacity-20 rounded-lg p-4">
-              <Award className="w-8 h-8 mx-auto mb-1" />
+            <div 
+              className="text-center bg-white bg-opacity-20 rounded-lg p-4"
+              role="region"
+              aria-label={`Promedio general: ${promedio}`}
+              onMouseEnter={() => settings.readAloud && speakText(`Promedio General: ${promedio}`)}
+            >
+              <Award className="w-8 h-8 mx-auto mb-1" aria-hidden="true" />
               <p className="text-3xl font-bold">{promedio}</p>
               <p className="text-xs text-blue-100">Promedio General</p>
             </div>
@@ -316,46 +920,78 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
+      <div 
+        className="grid grid-cols-1 md:grid-cols-4 gap-4"
+        role="region"
+        aria-label="Estadísticas académicas"
+      >
+        <div 
+          className="bg-white rounded-lg shadow p-4"
+          onMouseEnter={() => settings.readAloud && speakText(`Materias Inscritas: ${estadisticas.total}`)}
+        >
           <p className="text-sm text-gray-600 mb-1">Materias Inscritas</p>
           <p className="text-2xl font-bold text-gray-800">{estadisticas.total}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div 
+          className="bg-white rounded-lg shadow p-4"
+          onMouseEnter={() => settings.readAloud && speakText(`Aprobadas: ${estadisticas.aprobadas}`)}
+        >
           <p className="text-sm text-gray-600 mb-1">Aprobadas</p>
           <p className="text-2xl font-bold text-green-600">{estadisticas.aprobadas}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div 
+          className="bg-white rounded-lg shadow p-4"
+          onMouseEnter={() => settings.readAloud && speakText(`Reprobadas: ${estadisticas.reprobadas}`)}
+        >
           <p className="text-sm text-gray-600 mb-1">Reprobadas</p>
           <p className="text-2xl font-bold text-red-600">{estadisticas.reprobadas}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div 
+          className="bg-white rounded-lg shadow p-4"
+          onMouseEnter={() => settings.readAloud && speakText(`En Progreso: ${estadisticas.sinCalificar}`)}
+        >
           <p className="text-sm text-gray-600 mb-1">En Progreso</p>
           <p className="text-2xl font-bold text-blue-600">{estadisticas.sinCalificar}</p>
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-lg">
-        <div className="flex border-b border-gray-200">
+        <div 
+          className="flex border-b border-gray-200"
+          role="tablist"
+          aria-label="Navegación del panel de estudiante"
+        >
           <button
-            onClick={() => setActiveTab('perfil')}
+            role="tab"
+            aria-selected={activeTab === 'perfil'}
+            aria-controls="perfil-panel"
+            id="perfil-tab"
+            onClick={() => handleTabChange('perfil')}
+            onMouseEnter={() => settings.readAloud && speakText('Mi Perfil')}
+            onFocus={() => announceMessage('Pestaña Mi Perfil enfocada')}
             className={`flex-1 px-6 py-4 font-medium transition-colors border-b-2 ${
               activeTab === 'perfil' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
             }`}
           >
             <div className="flex items-center justify-center gap-2">
-              <User className="w-5 h-5" />
+              <User className="w-5 h-5" aria-hidden="true" />
               Mi Perfil
             </div>
           </button>
           <button
-            onClick={() => setActiveTab('calificaciones')}
+            role="tab"
+            aria-selected={activeTab === 'calificaciones'}
+            aria-controls="calificaciones-panel"
+            id="calificaciones-tab"
+            onClick={() => handleTabChange('calificaciones')}
+            onMouseEnter={() => settings.readAloud && speakText('Mis Calificaciones')}
+            onFocus={() => announceMessage('Pestaña Mis Calificaciones enfocada')}
             className={`flex-1 px-6 py-4 font-medium transition-colors border-b-2 ${
               activeTab === 'calificaciones' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
             }`}
           >
             <div className="flex items-center justify-center gap-2">
-              <BookOpen className="w-5 h-5" />
+              <BookOpen className="w-5 h-5" aria-hidden="true" />
               Mis Calificaciones
             </div>
           </button>
@@ -363,53 +999,115 @@ export default function StudentDashboard() {
 
         <div className="p-6">
           {activeTab === 'perfil' ? (
-            <div>
+            <div
+              role="tabpanel"
+              id="perfil-panel"
+              aria-labelledby="perfil-tab"
+              tabIndex={0}
+            >
               <div className="flex items-center gap-3 mb-6">
-                <GraduationCap className="w-6 h-6 text-blue-600" />
+                <GraduationCap className="w-6 h-6 text-blue-600" aria-hidden="true" />
                 <h3 className="text-xl font-bold text-gray-800">Información Personal</h3>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-6" role="region" aria-label="Formulario de información personal">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nombre(s) *</label>
+                    <label 
+                      htmlFor="nombre"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Nombre(s) *
+                    </label>
                     <input
+                      id="nombre"
                       type="text"
                       required
                       value={formData.nombre}
                       onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                      onFocus={() => {
+                        if (settings.readAloud) {
+                          speakText('Campo de nombre');
+                        }
+                        announceMessage('Campo de nombre enfocado');
+                      }}
+                      onMouseEnter={() => settings.readAloud && speakText('Nombre')}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      aria-describedby="nombre-description"
                     />
+                    <span id="nombre-description" className="sr-only">
+                      Ingresa tu nombre o nombres
+                    </span>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Apellido Paterno *</label>
+                    <label 
+                      htmlFor="apellido_paterno"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Apellido Paterno *
+                    </label>
                     <input
+                      id="apellido_paterno"
                       type="text"
                       required
                       value={formData.apellido_paterno}
                       onChange={(e) => setFormData({ ...formData, apellido_paterno: e.target.value })}
+                      onFocus={() => {
+                        if (settings.readAloud) {
+                          speakText('Campo de apellido paterno');
+                        }
+                        announceMessage('Campo de apellido paterno enfocado');
+                      }}
+                      onMouseEnter={() => settings.readAloud && speakText('Apellido Paterno')}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Apellido Materno *</label>
+                    <label 
+                      htmlFor="apellido_materno"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Apellido Materno *
+                    </label>
                     <input
+                      id="apellido_materno"
                       type="text"
                       required
                       value={formData.apellido_materno}
                       onChange={(e) => setFormData({ ...formData, apellido_materno: e.target.value })}
+                      onFocus={() => {
+                        if (settings.readAloud) {
+                          speakText('Campo de apellido materno');
+                        }
+                        announceMessage('Campo de apellido materno enfocado');
+                      }}
+                      onMouseEnter={() => settings.readAloud && speakText('Apellido Materno')}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Carrera</label>
+                    <label 
+                      htmlFor="carrera"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Carrera
+                    </label>
                     <select
+                      id="carrera"
                       value={formData.carrera_id}
                       onChange={(e) => setFormData({ ...formData, carrera_id: e.target.value })}
+                      onFocus={() => {
+                        if (settings.readAloud) {
+                          speakText('Campo de carrera');
+                        }
+                        announceMessage('Campo de carrera enfocado');
+                      }}
+                      onMouseEnter={() => settings.readAloud && speakText('Carrera')}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      aria-label="Seleccionar carrera"
                     >
                       <option value="">Seleccionar carrera</option>
                       {carreras.map((carrera) => (
@@ -419,27 +1117,53 @@ export default function StudentDashboard() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Semestre Actual *</label>
+                    <label 
+                      htmlFor="semestre"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Semestre Actual *
+                    </label>
                     <input
+                      id="semestre"
                       type="number"
                       required
                       min="1"
                       max="12"
                       value={formData.semestre_actual}
                       onChange={(e) => setFormData({ ...formData, semestre_actual: parseInt(e.target.value) })}
+                      onFocus={() => {
+                        if (settings.readAloud) {
+                          speakText('Campo de semestre actual');
+                        }
+                        announceMessage('Campo de semestre actual enfocado');
+                      }}
+                      onMouseEnter={() => settings.readAloud && speakText('Semestre Actual')}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      aria-describedby="semestre-description"
                     />
+                    <span id="semestre-description" className="sr-only">
+                      Selecciona un semestre del 1 al 12
+                    </span>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Número de Control</label>
+                    <label 
+                      htmlFor="numero_control"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Número de Control
+                    </label>
                     <input
+                      id="numero_control"
                       type="text"
                       value={estudianteData.numero_control}
                       disabled
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+                      aria-describedby="numero-control-help"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Este campo no se puede modificar</p>
+                    <p id="numero-control-help" className="text-xs text-gray-500 mt-1">
+                      Este campo no se puede modificar
+                    </p>
                   </div>
                 </div>
 
@@ -447,73 +1171,94 @@ export default function StudentDashboard() {
                   <button
                     onClick={handleSaveProfile}
                     disabled={saving}
-                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                    onMouseEnter={() => settings.readAloud && speakText('Botón Guardar Cambios')}
+                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 focus:ring-4 focus:ring-blue-300 transition-all"
+                    aria-label={saving ? 'Guardando cambios, por favor espere' : 'Guardar cambios en el perfil'}
                   >
-                    <Save className="w-4 h-4" />
+                    <Save className="w-4 h-4" aria-hidden="true" />
                     {saving ? 'Guardando...' : 'Guardar Cambios'}
                   </button>
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div 
+                className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg"
+                role="note"
+                aria-label="Nota importante sobre modificación de información"
+              >
                 <p className="text-sm text-blue-900">
                   <strong>Nota:</strong> Solo puedes modificar tu información personal. Las calificaciones son asignadas por los docentes.
                 </p>
               </div>
             </div>
           ) : (
-            <div>
+            <div
+              role="tabpanel"
+              id="calificaciones-panel"
+              aria-labelledby="calificaciones-tab"
+              tabIndex={0}
+            >
               <h3 className="text-xl font-bold text-gray-800 mb-6">Historial de Calificaciones</h3>
 
               {calificaciones.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">No tienes materias inscritas aún</div>
+                <div 
+                  className="text-center py-12 text-gray-500"
+                  role="status"
+                >
+                  No tienes materias inscritas aún
+                </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table 
+                    className="w-full"
+                    role="table"
+                    aria-label="Tabla de calificaciones"
+                  >
                     <thead>
                       <tr className="border-b border-gray-200">
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Materia</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Grupo</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Periodo</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Calificación</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Estado</th>
+                        <th scope="col" className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Materia</th>
+                        <th scope="col" className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Grupo</th>
+                        <th scope="col" className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Periodo</th>
+                        <th scope="col" className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Calificación</th>
+                        <th scope="col" className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Estado</th>
                       </tr>
                     </thead>
                     <tbody>
                       {calificaciones.map((cal) => (
-                        <tr key={cal.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <tr 
+                          key={cal.id} 
+                          className="border-b border-gray-100 hover:bg-gray-50"
+                          onMouseEnter={() => settings.readAloud && speakText(
+                            `${cal.materia_nombre}, calificación: ${cal.calificacion_final !== null ? cal.calificacion_final : 'en progreso'}`
+                          )}
+                        >
                           <td className="px-4 py-3 text-sm text-gray-900 font-medium">
                             {cal.materia_nombre}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{cal.grupos_materia.nombre_grupo}</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{cal.grupos_materia.periodo_academico}</td>
-                          <td className="px-4 py-3 text-sm">
-                            {cal.calificacion_final !== null ? (
-                              <span className={`font-semibold text-lg ${
-                                cal.calificacion_final >= 70 ? 'text-green-700' : 'text-red-700'
-                              }`}>
-                                {cal.calificacion_final.toFixed(2)}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 italic">En progreso</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            {cal.calificacion_final !== null ? (
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                cal.calificacion_final >= 70
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
-                              }`}>
-                                {cal.calificacion_final >= 70 ? 'Aprobado' : 'Reprobado'}
-                              </span>
-                            ) : (
-                              <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                Cursando
-                              </span>
-                            )}
-                          </td>
-                        </tr>
+                          <td className="px-4 py-3 text-sm text-gray-700">{cal.grupos_materia.nombre_grupo}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {cal.grupos_materia.periodo_academico}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 font-semibold">
+                          {cal.calificacion_final !== null ? cal.calificacion_final : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {cal.calificacion_final === null ? (
+                            <span className="px-2 py-1 text-xs rounded bg-blue-100 text-blue-700">
+                              En progreso
+                            </span>
+                          ) : cal.calificacion_final >= 70 ? (
+                            <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">
+                              Aprobado
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-700">
+                              Reprobado
+                            </span>
+                          )}
+                        </td>
+                      </tr>
                       ))}
                     </tbody>
                   </table>

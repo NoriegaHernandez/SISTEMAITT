@@ -1,3 +1,4 @@
+// src/contexts/AccessibilityContext.tsx - VERSIÓN CORREGIDA PARA FILTROS
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 
 export type ContrastMode = 'normal' | 'high' | 'inverted' | 'deuteranopia' | 'protanopia' | 'tritanopia';
@@ -17,15 +18,15 @@ export interface AccessibilitySettings {
   reducedMotion: boolean;
   flashingDisabled: boolean;
   colorBlindMode: boolean;
-  letterSpacing: number; // NUEVA PROPIEDAD
-  lineHeight: number; // NUEVA PROPIEDAD
-  wordSpacing: number; // NUEVA PROPIEDAD
+  letterSpacing: number;
+  lineHeight: number;
+  wordSpacing: number;
   
   // Auditivas
   transcriptionEnabled: boolean;
   captions: boolean;
   visualNotifications: boolean;
-  screenReader: boolean; // NUEVA PROPIEDAD
+  screenReader: boolean;
   
   // Motoras
   largePointer: boolean;
@@ -34,7 +35,7 @@ export interface AccessibilitySettings {
   voiceControl: boolean;
   gestureRecognition: boolean;
   onScreenKeyboard: boolean;
-  clickAssist: boolean; // NUEVA PROPIEDAD
+  clickAssist: boolean;
   
   // Cognitivas
   readAloud: boolean;
@@ -53,7 +54,7 @@ interface AccessibilityContextType {
   exportSettings: () => string;
   importSettings: (json: string) => void;
   announceMessage: (message: string, priority?: 'polite' | 'assertive') => void;
-  speakText: (text: string) => void; // NUEVA FUNCIÓN
+  speakText: (text: string) => void;
 }
 
 const defaultSettings: AccessibilitySettings = {
@@ -66,20 +67,20 @@ const defaultSettings: AccessibilitySettings = {
   reducedMotion: false,
   flashingDisabled: false,
   colorBlindMode: false,
-  letterSpacing: 0, // NUEVO
-  lineHeight: 1.6, // NUEVO
-  wordSpacing: 0, // NUEVO
+  letterSpacing: 0,
+  lineHeight: 1.6,
+  wordSpacing: 0,
   transcriptionEnabled: false,
   captions: false,
   visualNotifications: true,
-  screenReader: false, // NUEVO
+  screenReader: false,
   largePointer: false,
   keyboardNavigationOnly: false,
   slowKeyRepeat: false,
   voiceControl: false,
   gestureRecognition: false,
   onScreenKeyboard: false,
-  clickAssist: false, // NUEVO
+  clickAssist: false,
   readAloud: false,
   focusedMode: 'normal',
   simplifiedMenus: false,
@@ -99,6 +100,23 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
     setSettings(prev => {
       const newSettings = { ...prev, ...updates };
       localStorage.setItem('accessibility-settings', JSON.stringify(newSettings));
+      
+      // Log especial para cambios importantes
+      if ('contrastMode' in updates) {
+        console.log(' Modo de contraste actualizado:', {
+          anterior: prev.contrastMode,
+          nuevo: updates.contrastMode,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      if ('largePointer' in updates) {
+        console.log(' Puntero grande actualizado:', {
+          nuevoValor: updates.largePointer,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
       applyAccessibilityStyles(newSettings);
       return newSettings;
     });
@@ -108,6 +126,7 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
     setSettings(defaultSettings);
     localStorage.removeItem('accessibility-settings');
     applyAccessibilityStyles(defaultSettings);
+    console.log(' Configuración de accesibilidad restablecida');
   }, []);
 
   const exportSettings = useCallback(() => {
@@ -118,8 +137,9 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
     try {
       const imported = JSON.parse(json);
       updateSettings(imported);
+      console.log(' Configuración importada exitosamente');
     } catch (error) {
-      console.error('Error importing settings:', error);
+      console.error('Error al importar configuración:', error);
     }
   }, [updateSettings]);
 
@@ -135,7 +155,6 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
     setTimeout(() => announcement.remove(), 3000);
   }, []);
 
-  // NUEVA FUNCIÓN: speakText para lectura en voz alta
   const speakText = useCallback((text: string) => {
     if ('speechSynthesis' in window && settings.readAloud) {
       window.speechSynthesis.cancel();
@@ -183,6 +202,15 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
           speakText(selection);
         }
       }
+
+      // Alt+P para toggle puntero grande (debugging)
+      if (e.altKey && e.key === 'p') {
+        e.preventDefault();
+        const newValue = !settings.largePointer;
+        updateSettings({ largePointer: newValue });
+        announceMessage(`Puntero grande ${newValue ? 'activado' : 'desactivado'}`);
+        console.log('⌨️ Atajo Alt+P - Puntero grande:', newValue);
+      }
     };
 
     document.addEventListener('keydown', handleKeyPress);
@@ -200,7 +228,7 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
       exportSettings,
       importSettings,
       announceMessage,
-      speakText, // AGREGAR AQUÍ
+      speakText,
     }}>
       {children}
     </AccessibilityContext.Provider>
@@ -215,9 +243,40 @@ export function useAccessibility() {
   return context;
 }
 
-// Aplicar estilos de accesibilidad
+// Aplicar estilos de accesibilidad - VERSIÓN CORREGIDA PARA FILTROS
 function applyAccessibilityStyles(settings: AccessibilitySettings) {
   const root = document.documentElement;
+  const htmlElement = document.querySelector('html') as HTMLElement;
+  
+  console.log('🎨 Aplicando estilos de accesibilidad...', {
+    contrastMode: settings.contrastMode,
+    largePointer: settings.largePointer,
+    timestamp: new Date().toISOString()
+  });
+  
+  // Limpiar TODAS las clases de accesibilidad primero
+  const accessibilityClasses = [
+    'high-contrast',
+    'inverted-colors',
+    'protanopia',
+    'deuteranopia',
+    'tritanopia',
+    'reduce-motion',
+    'large-pointer',
+    'highlight-focus',
+    'focused-mode',
+    'simplified-mode',
+    'text-outline',
+    'click-assist',
+    'dark-mode',
+    'night-mode',
+    'keyboard-only'
+  ];
+  
+  accessibilityClasses.forEach(className => {
+    root.classList.remove(className);
+    htmlElement?.classList.remove(className);
+  });
   
   // Tamaño de texto
   const fontSizeMap = {
@@ -238,7 +297,7 @@ function applyAccessibilityStyles(settings: AccessibilitySettings) {
   };
   root.style.fontFamily = fontMap[settings.textStyle];
 
-  // NUEVOS ESTILOS: Espaciado
+  // Espaciado
   root.style.letterSpacing = `${settings.letterSpacing}px`;
   root.style.lineHeight = `${settings.lineHeight}`;
   root.style.wordSpacing = `${settings.wordSpacing}px`;
@@ -269,41 +328,124 @@ function applyAccessibilityStyles(settings: AccessibilitySettings) {
     root.style.setProperty(key, value);
   });
 
-  // Contraste
-  root.classList.toggle('high-contrast', settings.contrastMode === 'high');
-  root.classList.toggle('inverted-colors', settings.contrastMode === 'inverted');
+  // Aplicar clases según el tema
+  if (settings.theme === 'dark') {
+    root.classList.add('dark-mode');
+  } else if (settings.theme === 'night') {
+    root.classList.add('night-mode');
+  }
 
-  // Daltonismo - aplicar filtros
-  const colorblindFilters = {
-    deuteranopia: 'url(#deuteranopia-filter)',
-    protanopia: 'url(#protanopia-filter)',
-    tritanopia: 'url(#tritanopia-filter)',
-  };
-  
-  if (settings.contrastMode in colorblindFilters) {
-    root.style.filter = colorblindFilters[settings.contrastMode as keyof typeof colorblindFilters];
+  // Contraste y Daltonismo - CORRECCIÓN: Aplicar a HTML en lugar de :root
+  if (settings.contrastMode === 'high') {
+    root.classList.add('high-contrast');
+    console.log(' Alto contraste aplicado');
+  } else if (settings.contrastMode === 'inverted') {
+    root.classList.add('inverted-colors');
+    console.log(' Colores invertidos aplicados');
+  } else if (settings.contrastMode === 'deuteranopia') {
+    // Aplicar clase tanto a html como a root
+    htmlElement?.classList.add('deuteranopia');
+    root.classList.add('deuteranopia');
+    
+    console.log('✅ Filtro deuteranopia aplicado - verificando...');
+    
+    setTimeout(() => {
+      const filter = document.getElementById('deuteranopia-filter');
+      const htmlHasClass = htmlElement?.classList.contains('deuteranopia');
+      const rootHasClass = root.classList.contains('deuteranopia');
+      
+      console.log('   📋 Estado del filtro deuteranopia:', {
+        filtroSVGExiste: !!filter,
+        htmlTieneClase: htmlHasClass,
+        rootTieneClase: rootHasClass,
+        computedFilter: window.getComputedStyle(htmlElement).filter
+      });
+      
+      if (!filter) {
+        console.error('❌ PROBLEMA: El filtro SVG deuteranopia NO existe');
+        console.log('   💡 Asegúrate de que <ColorblindFilters /> está en App.tsx');
+      } else if (window.getComputedStyle(htmlElement).filter === 'none') {
+        console.warn('⚠️ El filtro existe pero no se está aplicando');
+        console.log('   💡 Verifica que accessibility.css se esté cargando correctamente');
+      }
+    }, 100);
+  } else if (settings.contrastMode === 'protanopia') {
+    htmlElement?.classList.add('protanopia');
+    root.classList.add('protanopia');
+    console.log(' Filtro protanopia aplicado');
+    
+    setTimeout(() => {
+      const filter = document.getElementById('protanopia-filter');
+      console.log('    Filtro SVG protanopia:', {
+        existe: !!filter,
+        htmlClass: htmlElement?.classList.contains('protanopia'),
+        computedFilter: window.getComputedStyle(htmlElement).filter
+      });
+    }, 100);
+  } else if (settings.contrastMode === 'tritanopia') {
+    htmlElement?.classList.add('tritanopia');
+    root.classList.add('tritanopia');
+    console.log(' Filtro tritanopia aplicado');
+    
+    setTimeout(() => {
+      const filter = document.getElementById('tritanopia-filter');
+      console.log('    Filtro SVG tritanopia:', {
+        existe: !!filter,
+        htmlClass: htmlElement?.classList.contains('tritanopia'),
+        computedFilter: window.getComputedStyle(htmlElement).filter
+      });
+    }, 100);
   } else {
-    root.style.filter = 'none';
+    console.log('ℹ Modo de contraste: normal');
   }
 
   // Movimiento reducido
-  root.classList.toggle('reduce-motion', settings.reducedMotion);
+  if (settings.reducedMotion) {
+    root.classList.add('reduce-motion');
+  }
 
-  // Puntero grande
-  root.classList.toggle('large-pointer', settings.largePointer);
+  // PUNTERO GRANDE
+  if (settings.largePointer) {
+    root.classList.add('large-pointer');
+    document.body.style.cursor = 'var(--cursor-large-default)';
+    
+    console.log(' Puntero grande ACTIVADO:', {
+      claseAñadida: root.classList.contains('large-pointer'),
+      cursorBody: document.body.style.cursor,
+    });
+  } else {
+    root.classList.remove('large-pointer');
+    document.body.style.cursor = '';
+    
+    console.log('Puntero grande DESACTIVADO');
+  }
 
   // Focus destacado
-  root.classList.toggle('highlight-focus', settings.highlightFocusArea);
+  if (settings.highlightFocusArea) {
+    root.classList.add('highlight-focus');
+  }
 
   // Modo enfocado
-  root.classList.toggle('focused-mode', settings.focusedMode === 'focused');
-  root.classList.toggle('simplified-mode', settings.focusedMode === 'simplified');
+  if (settings.focusedMode === 'focused') {
+    root.classList.add('focused-mode');
+  } else if (settings.focusedMode === 'simplified') {
+    root.classList.add('simplified-mode');
+  }
 
   // Contornos de texto
-  root.classList.toggle('text-outline', settings.showTextOutlines);
+  if (settings.showTextOutlines) {
+    root.classList.add('text-outline');
+  }
 
-  // Asistencia de click (hover pause)
-  root.classList.toggle('click-assist', settings.clickAssist);
+  // Asistencia de click
+  if (settings.clickAssist) {
+    root.classList.add('click-assist');
+  }
+
+  // Navegación solo por teclado
+  if (settings.keyboardNavigationOnly) {
+    root.classList.add('keyboard-only');
+  }
 
   // Inyectar fuente Dyslexic si es necesaria
   if (settings.textStyle === 'dyslexic' && !document.getElementById('dyslexic-font')) {
@@ -313,4 +455,14 @@ function applyAccessibilityStyles(settings: AccessibilitySettings) {
     link.rel = 'stylesheet';
     document.head.appendChild(link);
   }
+
+  // Log final de resumen
+  console.log(' Resumen de estilos aplicados:', {
+    contrastMode: settings.contrastMode,
+    punteroGrande: settings.largePointer,
+    htmlHasClass: htmlElement?.classList.contains(settings.contrastMode),
+    rootHasClass: root.classList.contains(settings.contrastMode),
+    todasLasClasesRoot: Array.from(root.classList).filter(c => accessibilityClasses.includes(c)),
+    todasLasClasesHTML: Array.from(htmlElement?.classList || []).filter(c => accessibilityClasses.includes(c))
+  });
 }
